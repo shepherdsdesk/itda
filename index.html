@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 잇다 (it,da) — 사랑방과 목자를 잇는 주일보고 | AI목양지원센터 제작 · 만든 사람 이세진 목사 | © 2026 AI목양지원센터. All rights reserved. | https://mokyangdesk.com -->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -6,6 +7,8 @@
 <title>잇다 · 사랑방 주일보고</title>
 <meta name="theme-color" content="#4f46e5">
 <meta name="description" content="잇다(it,da) — 사랑방과 목자를 잇는 주일보고. 예배 출석, 기도제목, 심방 부탁">
+<meta name="author" content="이세진 목사 · AI목양지원센터">
+<meta name="copyright" content="© 2026 AI목양지원센터">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -147,7 +150,14 @@ textarea{resize:vertical;min-height:84px}
 .demo{background:var(--warn-soft);color:#92400e;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:12px}
 .spin{width:22px;height:22px;border:3px solid var(--pri-soft);border-top-color:var(--pri);border-radius:50%;animation:sp .7s linear infinite;margin:40px auto}
 @keyframes sp{to{transform:rotate(360deg)}}
-.foot{text-align:center;color:#a3a7b8;font-size:12px;margin-top:22px}
+.foot{text-align:center;color:#a3a7b8;font-size:12px;margin-top:22px;line-height:1.7}
+.foot a{color:#8b90a6;text-decoration:none}
+.credit{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:14px;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
+.credit .cl{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--pri2),var(--pri));display:grid;place-items:center;flex:none}
+.credit div{flex:1;min-width:0}
+.credit b{display:block;font-size:14px}
+.credit small{color:var(--sub);font-size:12.5px}
+.credit em{font-style:normal;color:var(--pri);font-weight:700;font-size:13.5px;white-space:nowrap}
 .seg button{padding:9px 4px;font-size:14px}
 .mrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
 .mrow:first-of-type{border-top:0}
@@ -196,6 +206,9 @@ small.note{display:block;color:var(--sub);font-size:12.5px;margin-top:6px}
    비워 두면 체험(데모) 모드로 동작합니다.
    ════════════════════════════════════════════════ */
 const API_URL = 'https://script.google.com/macros/s/AKfycbxCN9q8gEaQnPNCKjNrd0-8ByH1XE63hChZ5vkapTph8FcPT7V36h9Bg5v4s5Oh4CYU/exec';
+
+/* ───────── 만든 곳 · 저작권 ───────── */
+const FOOT = `<div class="foot"><a href="https://mokyangdesk.com" target="_blank" rel="noopener">AI목양지원센터 제작</a> · 만든 사람 이세진 목사<br>© 2026 AI목양지원센터. All rights reserved.</div>`;
 
 /* ───────── 상태 ───────── */
 const S = { token: '', me: null, date: lastSunday(), tab: 'report', form: null, dash: null, target: null, busy: false };
@@ -332,7 +345,7 @@ function shell(inner) {
   return `<header class="top"><div class="brand"><div class="logo">${logoSvg(20)}</div><div><b>잇다 <span style="font-weight:500;color:#9aa0b4;font-size:12px;letter-spacing:.5px">it,da</span></b><small>${esc(S.me && S.me.church ? S.me.church + ' · ' : '')}${esc(sub)}</small></div></div>
   ${u ? `<button class="icon-btn" onclick="openMenu()">${esc(u.name)} ▾</button>` : ''}</header>
   ${!API_URL ? '<div class="demo">체험 모드입니다. 입력한 내용은 이 기기에만 잠시 저장돼요. (index.html의 API_URL을 넣으면 실제 운영)</div>' : ''}
-  ${inner}<div class="foot">만든 사람 촌놈루니</div>`;
+  ${inner}${FOOT}`;
 }
 
 function dateBar() {
@@ -351,7 +364,11 @@ function renderLogin() {
     <label class="field"><span>접속코드</span><input class="input" id="lgCode" inputmode="numeric" autocomplete="one-time-code" placeholder="교구 목회자에게 받은 숫자"></label>
     <button class="btn pri block" id="lgBtn" onclick="doLogin()">들어가기</button>
     <p class="muted" style="margin:12px 0 0;text-align:center">한 번만 로그인하면 이 휴대폰에서는 계속 유지됩니다.</p>
-  </div><div class="foot">만든 사람 촌놈루니</div>`;
+  </div>
+  <a class="credit" href="https://mokyangdesk.com" target="_blank" rel="noopener">
+    <span class="cl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></span>
+    <div><b>AI목양지원센터 제작</b><small>만든 사람 이세진 목사</small></div><em>mokyangdesk.com →</em></a>
+  ${FOOT}`;
   document.getElementById('lgCode').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 }
 
