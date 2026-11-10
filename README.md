@@ -11,12 +11,24 @@
 
 | | 주소 |
 |---|---|
-| **잇다 앱** | **[https://shepherdsdesk.github.io/itda/](https://shepherdsdesk.github.io/itda/)** |
-| AI목양지원센터 · 목양 데스크 | [https://mokyangdesk.com](https://mokyangdesk.com) |
+| **잇다 앱** (모든 교회·교구 공용) | **[https://shepherdsdesk.github.io/itda/](https://shepherdsdesk.github.io/itda/)** |
+| 체험해 보기 | [https://shepherdsdesk.github.io/itda/?demo=1](https://shepherdsdesk.github.io/itda/?demo=1) |
+| 소개 페이지 | [https://mokyangdesk.com/itda.html](https://mokyangdesk.com/itda.html) |
+| 설치 설명서 | [https://mokyangdesk.com/itda-install.html](https://mokyangdesk.com/itda-install.html) |
+| AI목양지원센터 | [https://mokyangdesk.com](https://mokyangdesk.com) |
 | 소스 저장소 | [https://github.com/shepherdsdesk/itda](https://github.com/shepherdsdesk/itda) |
 
-> 사랑방장·교구 목회자는 교구에서 받은 **개인 링크**로 들어가면 로그인 없이 자기 화면이 바로 열립니다.
-> 공통 주소로 들어온 경우엔 이름 + 접속코드로 한 번만 로그인하면 계속 유지됩니다.
+### 앱은 하나, 시트는 교구마다
+
+```
+            shepherdsdesk.github.io/itda   ← 모든 교구가 같은 앱
+           /              |              \
+   5교구 구글 시트    6교구 구글 시트    ○○교회 시트   ← 교구 목회자가 각자 사본을 만들어 배포
+```
+
+- 교구 목회자는 **구글 시트 사본**(앱스크립트 포함)만 내 드라이브로 가져와 웹 앱으로 배포합니다.
+- 사랑방장에게 보내는 개인 링크 `…/itda/?t=개인토큰&s=서버ID` 의 `s=` 가 그 교구 시트로 연결합니다.
+- 명단·보고는 각 교구 시트에만 저장되고, 다른 교구와 섞이지 않습니다.
 
 ---
 
@@ -73,25 +85,45 @@ itda/
 ├─ sw.js                  앱 화면 빠르게 열기 (보고 데이터는 저장하지 않음)
 ├─ icons/                 앱 아이콘
 ├─ gas/Code.gs            서버 코드 — 구글 앱스크립트에 붙여 넣기
-├─ docs/설치안내.md        처음 설치하는 방법
+├─ docs/설치안내.md        처음 설치하는 방법 (웹 설명서와 같은 내용)
 └─ docs/잇다_명단양식.csv  명단을 직접 만들 때 쓰는 빈 양식
 ```
 
 - **저장소:** 구글 시트 (설정 · 사용자 · 성도명단 · 주일보고 · 기도제목 · 목회자응답 · 문자자료)
 - **서버:** Google Apps Script 웹 앱
-- **앱 화면:** GitHub Pages (이 저장소)
+- **앱 화면:** GitHub Pages (이 저장소) — 모든 교구 공용, 데이터는 저장하지 않음
+
+## 체험판과 사용 허락
+
+잇다는 **AI목양지원센터의 사용 허락을 받아 쓰는 프로그램**입니다.
+
+| 단계 | 내용 |
+|---|---|
+| 🧪 체험판 | 시트 사본을 만들면 **체험교구**가 생깁니다. 관리자 `admin`(접속코드는 사본마다 다름 · 메뉴 ④로 새로 만들기), 열두 제자가 사랑방 3곳(갈릴리1·갈릴리2·예루살렘1)에 나뉘어 있고 지난 3주 예시 보고가 들어 있습니다. |
+| ✉️ 사용 요청 | [mokyangdesk.com/itda.html#request](https://mokyangdesk.com/itda.html#request) 에서 교회이름·담당자·연락처를 보내 주세요. |
+| 🔑 사용키 | `ITDA-T270110-1A2B3C4D` 형식(T=7일 체험판, F=정식). [설정] 교회이름에 맞춰 발급됩니다. 메뉴 **잇다 → ③ 사용키 넣기** 또는 앱 관리자 메뉴에서 넣습니다. |
+
+- 사용키가 없으면 체험 데이터로 둘러보기만 할 수 있고, **실제 명단 파일 올리기·교역자 배정**은 사용키를 넣은 뒤 열립니다.
+- 7일 체험판 키의 기간이 끝나면 **앱이 멈춥니다** — 사랑방장·목회자는 「쉬는 중」 화면, 관리자는 사용키 넣기 화면만 열립니다. 기록은 시트에 그대로 남고, 정식 사용키를 넣으면 바로 다시 열립니다.
+- 실제 사용을 시작할 때 메뉴 **⑤ 체험 데이터(열두 제자) 지우기**를 누르세요.
 
 ## 처음 설치
 
-자세한 순서는 **[docs/설치안내.md](docs/설치안내.md)** 를 보세요.
+**[설치 설명서 (mokyangdesk.com/itda-install.html)](https://mokyangdesk.com/itda-install.html)** 를 따라 하시면 30분 안에 끝납니다.
 
-1. 새 구글 시트 → 확장 프로그램 → Apps Script → `gas/Code.gs` 붙여 넣기 → `setup` 실행
-2. [사용자] 시트에 관리자 한 줄 → 메뉴 **잇다 → ②**
-3. 배포 → 새 배포 → 웹 앱 (실행: 나 · 액세스: 모든 사용자) → URL 복사
-4. `index.html`의 `const API_URL = '…'`에 URL 넣기 → 이 저장소에 올리고 GitHub Pages 켜기
-5. [설정] 시트 `앱주소`에 `https://shepherdsdesk.github.io/itda/` → 메뉴 **잇다 → ②** → 개인 링크로 접속
+1. 소개 페이지의 **내 드라이브에 사본 만들기** → 시트 메뉴 **잇다 → ① 처음 설정** (체험판이 함께 만들어짐)
+2. 사용 요청 → 받은 사용키를 **③ 사용키 넣기** → **⑤ 체험 데이터 지우기** → [사용자] 시트에 본인(역할 `관리자`, 교구 `5교구`)
+3. 확장 프로그램 → Apps Script → **배포 → 새 배포 → 웹 앱** (실행: 나 · 액세스: 모든 사용자) → URL 복사
+4. 시트 메뉴 **잇다 → ②** → URL 붙여 넣기 → 내 개인 링크로 접속
+5. 앱 **명단 관리**에서 교회 명단 파일 올리기 → 사랑방장 링크 보내기
 
-> 서버 코드를 고친 뒤에는 Apps Script **배포 → 배포 관리 → ✏️ → 새 버전**으로 다시 배포해야 반영됩니다. (주소는 그대로)
+> 서버 코드를 고친 뒤에는 **배포 → 배포 관리 → ✏️ → 새 버전**으로 다시 배포하세요. 「새 배포」를 하면 서버 주소가 바뀌어 이미 보낸 링크가 작동하지 않습니다.
+
+### 배포용 원본 시트 만들기 (센터 관리자용)
+
+1. 새 구글 시트 → 확장 프로그램 → Apps Script → `gas/Code.gs` 붙여 넣기 → `setup` 실행 (명단은 비워 둠)
+2. 공유 → 일반 액세스 **링크가 있는 모든 사용자 · 뷰어**
+3. 시트 주소 끝의 `/edit…` 를 `/copy` 로 바꾼 주소를 소개·설치 페이지의 `LINKS.copy` 에 넣기
 
 ## 규모와 속도
 
@@ -120,4 +152,4 @@ itda/
 © 2026 AI목양지원센터 · 이세진 목사. All rights reserved.
 
 이 프로그램의 코드·디자인·문안의 저작권은 AI목양지원센터에 있습니다.
-교회 도입·사용·수정 문의는 [mokyangdesk.com](https://mokyangdesk.com)으로 연락해 주세요.
+잇다는 사용 허락(사용키)을 받아 사용하는 프로그램입니다. 사용 요청·도입·수정 문의는 [mokyangdesk.com/itda.html#request](https://mokyangdesk.com/itda.html#request)로 보내 주세요.

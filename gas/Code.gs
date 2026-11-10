@@ -27,13 +27,22 @@ const HEAD = {
 };
 const ROLE = { LEADER: '사랑방장', PASTOR: '목회자', ADMIN: '관리자' };
 const REQ = ['심방전화', '기도부탁', '심방부탁'];
+const APP_URL = 'https://shepherdsdesk.github.io/itda/';
+const REQUEST_URL = 'https://mokyangdesk.com/itda.html#request';
+const TRIAL_PARISH = '체험교구';
+// 사용키 확인용 값 — AI목양지원센터 키 발급기와 같아야 합니다 (바꾸면 이미 발급한 키가 모두 무효)
+const LICENSE_SALT = 'itda·AI목양지원센터·2026';
 
 /* ───────────── 메뉴 · 처음 설정 ───────────── */
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('잇다')
     .addItem('① 처음 설정 (시트 만들기)', 'setup')
-    .addItem('② 접속코드·개인 링크 만들기', 'fillTokens')
+    .addItem('② 접속코드·개인 링크 만들기', 'makeLinks')
+    .addSeparator()
+    .addItem('③ 사용키 넣기', 'enterKey')
+    .addItem('④ 체험 admin 코드 새로 만들기', 'rotateTrialCode')
+    .addItem('⑤ 체험 데이터(열두 제자) 지우기', 'clearTrial')
     .addToUi();
 }
 
@@ -50,28 +59,42 @@ function setup() {
     return s;
   };
   make('CONFIG', [
-    ['교회이름', '할렐루야교회', '앱 상단에 표시'],
-    ['앱주소', '', 'GitHub Pages 주소 (예: https://shepherdsdesk.github.io/sarangbang/) — 개인 링크를 만들 때 사용']
+    ['교회이름', '', '앱 상단에 표시 (예: 할렐루야교회 5교구)'],
+    ['앱주소', APP_URL, '잇다 앱 주소 — 바꾸지 않아도 됩니다'],
+    ['서버주소', '', '배포한 웹 앱 URL — 앱에 처음 들어오면 자동으로 채워집니다']
   ]);
-  const users = make('USERS', [
-    ['홍길동', ROLE.LEADER, '5교구', '이매1', '', '010-0000-0000', '', '', ''],
-    ['이세진', ROLE.PASTOR, '5교구', '', '', '', '', '', '']
-  ]);
+  const firstTime = !ss.getSheetByName(SH.USERS);
+  const users = make('USERS');
   users.getRange('E:F').setNumberFormat('@');
-  const mem = make('MEMBERS', [
-    ['5교구', '이매', '이매1', '홍길동', '집사', '010-0000-0000', '', 'm-sample1'],
-    ['5교구', '이매', '이매1', '김은혜', '권사', '', '', 'm-sample2'],
-    ['5교구', '이매', '이매1', '박소망', '성도', '', '', 'm-sample3']
-  ]);
-  mem.getRange('E:E').setNumberFormat('@');
+  const mem = make('MEMBERS');
+  mem.getRange('A:H').setNumberFormat('@');
   make('REPORTS').getRange('A:A').setNumberFormat('@');
   make('PRAYERS').getRange('A:A').setNumberFormat('@');
   make('RESP').getRange('B:B').setNumberFormat('@');
+  const cfgRows = rows(SH.CONFIG).map(r => r['항목']);
+  if (cfgRows.indexOf('사용키') < 0) setConfig('사용키', '');
+  if (firstTime) seedTrial();
   make('SMS', [
     ['환우', '(예시) 쉐퍼드 데스크 문안을 이렇게 붙여 넣으세요', '치료받으시는 동안 교구가 함께 기도하고 있습니다. {이름}님 마음에 주님의 평안이 가득하기를 기도합니다.', '여호와는 너를 지키시는 이시라 여호와께서 네 오른쪽에서 네 그늘이 되시나니 (시 121:5)', '📝 (문자예화 칸) 짧은 예화를 넣으면 앱에서 ‘문자예화 첨부’로 붙일 수 있습니다.'],
   ]);
+  const adm = rows(SH.USERS).find(x => x['이름'] === 'admin');
+  SpreadsheetApp.getUi().alert('잇다 설정 완료!' + (adm ? '\n\n🧪 체험판이 준비됐습니다 — 체험교구 · 열두 제자 · 사랑방 3곳\n   관리자 이름: admin   접속코드: ' + adm['접속코드'] + '\n   (배포 후 메뉴 ② 를 누르면 바로 들어가는 링크가 생깁니다)' : '') + '\n\n1) [사용자] 시트에 관리자(본인)와 교구 목회자만 넣으세요.\n2) 성도 명단·사랑방 편성·사랑방장 지정은 앱의 ‘명단 관리’에서 엑셀 파일을 올려 하면 됩니다.\n3) [문자자료] 시트에 쉐퍼드 데스크 문자·예화를 붙여 넣으면 앱에서 바로 고를 수 있습니다.\n4) 배포 → 새 배포 → 웹 앱(실행: 나 · 액세스: 모든 사용자)으로 배포한 뒤, 메뉴 ② 를 누르면 개인 링크가 만들어집니다.');
+}
+
+/** 메뉴 ②: 서버 주소가 없으면 물어보고, 접속코드·개인 링크를 만든 뒤 내 링크를 보여 줌 */
+function makeLinks() {
+  const ui = SpreadsheetApp.getUi();
+  let sid = serverIdOf(getConfig()['서버주소']);
+  if (!sid) {
+    const r = ui.prompt('웹 앱 주소 넣기', '배포 → 배포 관리에서 복사한 웹 앱 URL을 붙여 넣으세요.\n(https://script.google.com/macros/s/…/exec)', ui.ButtonSet.OK_CANCEL);
+    if (r.getSelectedButton() !== ui.Button.OK) return;
+    sid = serverIdOf(r.getResponseText());
+    if (!sid) { ui.alert('웹 앱 URL이 아닌 것 같아요. 다시 해 주세요.'); return; }
+    setConfig('서버주소', 'https://script.google.com/macros/s/' + sid + '/exec');
+  }
   fillTokens();
-  SpreadsheetApp.getUi().alert('잇다 설정 완료!\n\n1) [사용자] 시트에 관리자(본인)와 교구 목회자만 넣으세요.\n2) 성도 명단·사랑방 편성·사랑방장 지정은 앱의 ‘명단 관리’에서 엑셀 파일을 올려 하면 됩니다.\n3) [문자자료] 시트에 쉐퍼드 데스크 문자·예화를 붙여 넣으면 앱에서 바로 고를 수 있습니다.\n4) 메뉴 ② 를 누르면 접속코드와 개인 링크가 만들어집니다.');
+  const me = rows(SH.USERS).find(x => x['역할'] === ROLE.ADMIN) || rows(SH.USERS).find(x => x['역할'] === ROLE.PASTOR);
+  ui.alert('개인 링크를 만들었습니다.\n\n[사용자] 시트의 ‘개인링크’ 칸을 확인하세요.' + (me ? '\n\n' + me['이름'] + ' 님 링크:\n' + me['개인링크'] + '\n\n이 링크를 휴대폰으로 보내 열면 바로 들어갑니다.' : ''));
 }
 
 /** 비어 있는 접속코드(4자리)·토큰·개인 링크를 채움 */
@@ -79,16 +102,19 @@ function fillTokens() {
   const s = sh(SH.USERS);
   const last = s.getLastRow();
   if (last < 2) return;
-  const base = String(getConfig()['앱주소'] || '').trim();
+  const cfg = getConfig();
+  const base = String(cfg['앱주소'] || APP_URL).trim();
+  const sid = serverIdOf(cfg['서버주소']);
   const range = s.getRange(2, 1, last - 1, HEAD.USERS.length);
   const v = range.getValues();
   v.forEach(r => {
     if (!r[0]) return;
     if (!String(r[4]).trim()) r[4] = code4();
     if (!String(r[6]).trim()) r[6] = newToken();
-    if (base) r[7] = base.replace(/\/?$/, '/') + '?t=' + r[6];
+    if (base) r[7] = base.replace(/\/?$/, '/') + '?t=' + r[6] + (sid ? '&s=' + sid : '');
   });
   range.setValues(v);
+  flush();
 }
 
 /* ───────────── 웹 API ───────────── */
@@ -113,16 +139,40 @@ const API = {
     if (!name || !code) throw new Error('이름과 접속코드를 입력해 주세요.');
     const u = rows(SH.USERS).find(x => String(x['이름']) === name && String(x['접속코드']) === code);
     if (!u) throw new Error('이름 또는 접속코드가 맞지 않습니다.');
+    licenseGate(u, 'me');
     let token = String(u['토큰'] || '');
     if (!token) { token = newToken(); sh(SH.USERS).getRange(u._row, 7).setValue(token); }
     touch(u);
     return { token };
   },
 
+  ping() { return { ok: true }; },
+
+  /** 앱에서 사용키 넣기 (관리자) */
+  setKey(req) {
+    const u = auth(req);
+    if (u['역할'] !== ROLE.ADMIN) throw new Error('관리자만 할 수 있습니다.');
+    const c = getConfig();
+    if (req.church != null && String(req.church).trim()) setConfig('교회이름', String(req.church).trim());
+    const church = getConfig()['교회이름'];
+    const k = String(req.key || '').trim().toUpperCase();
+    const L = licenseCheck(k, church);
+    if (L.state === 'none' || L.state === 'invalid') throw new Error('사용키가 맞지 않습니다. 교회이름(' + (church || '비어 있음') + ')이 사용 요청 때 적은 이름과 같은지 확인해 주세요.');
+    setConfig('사용키', k);
+    return { state: L.state, until: L.until || '', daysLeft: L.daysLeft == null ? null : L.daysLeft };
+  },
+
   me(req) {
     const u = auth(req);
     touch(u);
-    const out = { user: view(u), church: getConfig()['교회이름'] || '' };
+    // 처음 들어올 때 서버주소·앱주소를 설정 시트에 자동 기록 → 이후 개인 링크에 들어감
+    try {
+      const cfg = getConfig(), sid = serverIdOf(req.server);
+      if (sid && !serverIdOf(cfg['서버주소'])) { setConfig('서버주소', 'https://script.google.com/macros/s/' + sid + '/exec'); fillTokens(); }
+      if (req.app && /^https:\/\//.test(req.app) && !cfg['앱주소']) setConfig('앱주소', String(req.app));
+    } catch (e) { }
+    const L = license();
+    const out = { user: view(u), church: getConfig()['교회이름'] || '', license: { state: L.state, until: L.until || '', daysLeft: L.daysLeft == null ? null : L.daysLeft, trialData: u['교구'] === TRIAL_PARISH, blocked: !licenseOK(u, L) } };
     if (u['역할'] === ROLE.PASTOR) out.sarangbangs = sarangbangsOf(u['교구']);
     if (u['역할'] === ROLE.ADMIN && !isChurchAdmin(u)) out.sarangbangs = sarangbangsOf(u['교구']);
     if (isChurchAdmin(u)) out.parishes = allParishes();
@@ -276,6 +326,8 @@ const API = {
   memberSave(req) {
     const u = auth(req);
     const parish = pastorParish(u, req.parish);
+    if (parish !== TRIAL_PARISH) needLicense('명단 고치기');
+    else if (license().state === 'expired') needLicense('명단 고치기');
     const m = req.member || {};
     const lock = LockService.getScriptLock(); lock.waitLock(20000);
     try {
@@ -301,6 +353,7 @@ const API = {
    *  all: 관리자가 교회 전체 파일을 올릴 때 파일 안의 모든 교구를 한 번에 반영 */
   rosterImport(req) {
     const u = auth(req);
+    needLicense('명단 파일 올리기');
     const all = !!req.all && isChurchAdmin(u);
     const base = all ? '' : pastorParish(u, req.parish);
     const pick = p => all ? parishNorm(p) : base;
@@ -355,6 +408,7 @@ const API = {
   staffSave(req) {
     const u = auth(req);
     if (u['역할'] !== ROLE.ADMIN) throw new Error('관리자만 할 수 있습니다.');
+    needLicense('교역자 배정');
     const p = req.person || {};
     const lock = LockService.getScriptLock(); lock.waitLock(20000);
     try {
@@ -383,6 +437,124 @@ const API = {
   }
 };
 
+
+
+/* ════════════ 사용키 (AI목양지원센터 사용 허락) ════════════
+ * 형식: ITDA-T260110-1A2B3C4D  (T=체험판·F=정식, 뒤 6자리=사용 마감 yymmdd, 정식 무기한은 999999)
+ * 키는 [설정] 교회이름에 묶여 있어 교회이름을 바꾸면 다시 받아야 합니다.
+ * 사용키가 없으면 체험 데이터로 둘러보기만 할 수 있고, 실제 명단 올리기·교역자 배정은 막힙니다. */
+function licenseCheck(key, church) {
+  key = String(key || '').trim().toUpperCase();
+  if (!key) return { state: 'none' };
+  const m = key.match(/^ITDA-([TF])(\d{6})-([0-9A-F]{8})$/);
+  if (!m) return { state: 'invalid' };
+  const sig = sha8(LICENSE_SALT + '|' + m[1] + '|' + m[2] + '|' + normChurch(church));
+  if (sig !== m[3]) return { state: 'invalid' };
+  const type = m[1] === 'F' ? 'full' : 'trial';
+  if (m[2] === '999999') return { state: type, until: '', daysLeft: null };
+  const until = '20' + m[2].slice(0, 2) + '-' + m[2].slice(2, 4) + '-' + m[2].slice(4, 6);
+  const today = Utilities.formatDate(new Date(), tz(), 'yyyy-MM-dd');
+  const days = Math.round((new Date(until + 'T00:00:00') - new Date(today + 'T00:00:00')) / 864e5);
+  return { state: days < 0 ? 'expired' : type, until, daysLeft: days };
+}
+function license() { const c = getConfig(); return licenseCheck(c['사용키'], c['교회이름']); }
+function normChurch(c) { return String(c || '').replace(/\s+/g, ''); }
+function sha8(t) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, t, Utilities.Charset.UTF_8)
+    .slice(0, 4).map(b => ('0' + (b & 255).toString(16)).slice(-2)).join('').toUpperCase();
+}
+/** 사용 허락 문 — 체험판 7일이 지나거나 키가 없으면(체험교구 제외) 관리자의 '사용키 넣기' 말고는 모두 멈춤 */
+function licenseOK(u, L) {
+  L = L || license();
+  return L.state === 'trial' || L.state === 'full' || (L.state === 'none' && u['교구'] === TRIAL_PARISH);
+}
+function licenseGate(u, action) {
+  const L = license();
+  if (licenseOK(u, L)) return;
+  if (u['역할'] === ROLE.ADMIN && ['me', 'setKey', 'ping'].indexOf(action) >= 0) return;
+  const why = L.state === 'expired' ? '7일 체험 기간(' + L.until + '까지)이 끝났습니다.'
+    : L.state === 'invalid' ? '사용키가 교회이름과 맞지 않습니다.' : '아직 사용키가 등록되지 않았습니다.';
+  throw new Error('LICENSE_STOP|' + why + (u['역할'] === ROLE.ADMIN ? ' 정식 사용키를 넣으면 바로 다시 쓸 수 있어요.' : ' 교구 관리자(목회자)에게 알려 주세요. 사용키가 등록되면 그동안의 기록 그대로 다시 열립니다.'));
+}
+
+/** 실제 명단을 다루는 일은 사용키가 있어야 함 */
+function needLicense(what) {
+  const L = license();
+  if (L.state === 'trial' || L.state === 'full') return;
+  const why = L.state === 'expired' ? '사용 기간(' + L.until + ')이 끝났습니다.' : L.state === 'invalid' ? '사용키가 [설정] 교회이름과 맞지 않습니다.' : '체험판에서는 예시 명단(열두 제자)으로만 둘러볼 수 있습니다.';
+  throw new Error(why + ' 「' + what + '」 기능은 사용키를 넣은 뒤 쓸 수 있어요. (사용 요청: mokyangdesk.com/itda.html)');
+}
+
+function enterKey() {
+  const ui = SpreadsheetApp.getUi();
+  const c = getConfig();
+  if (!String(c['교회이름'] || '').trim()) { ui.alert('먼저 [설정] 탭의 교회이름을 적어 주세요.\n(사용키는 교회이름에 맞춰 발급됩니다 — 사용 요청 때 적은 이름과 똑같이)'); return; }
+  const r = ui.prompt('사용키 넣기', 'AI목양지원센터에서 받은 사용키를 붙여 넣으세요.\n(예: ITDA-T270110-1A2B3C4D)\n\n교회이름: ' + c['교회이름'], ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const k = r.getResponseText().trim().toUpperCase();
+  const L = licenseCheck(k, c['교회이름']);
+  if (L.state === 'invalid' || L.state === 'none') { ui.alert('사용키가 맞지 않습니다.\n[설정] 교회이름이 사용 요청 때 적은 이름과 같은지 확인해 주세요.'); return; }
+  setConfig('사용키', k);
+  ui.alert(L.state === 'full' ? '정식 사용키가 등록됐습니다. 감사합니다 🙏' : L.state === 'trial' ? '체험판 사용키가 등록됐습니다. ' + L.until + '까지 (' + L.daysLeft + '일 남음) 모든 기능을 쓸 수 있습니다.' : '이미 기간이 끝난 키입니다 (' + L.until + ').');
+}
+
+/* ════════════ 체험 데이터 — 체험교구 · 열두 제자 ════════════ */
+function seedTrial() {
+  const P = TRIAL_PARISH;
+  appendObj(SH.USERS, { '이름': 'admin', '역할': ROLE.ADMIN, '교구': P, '접속코드': code6(), '토큰': newToken() });
+  const D = [ // 마을, 사랑방, 이름, 직분, 사랑방장
+    ['갈릴리', '갈릴리1', '베드로', '집사', 1], ['갈릴리', '갈릴리1', '안드레', '집사', 0], ['갈릴리', '갈릴리1', '야고보', '성도', 0], ['갈릴리', '갈릴리1', '요한', '성도', 0],
+    ['갈릴리', '갈릴리2', '빌립', '권사', 1], ['갈릴리', '갈릴리2', '바돌로매', '집사', 0], ['갈릴리', '갈릴리2', '도마', '성도', 0], ['갈릴리', '갈릴리2', '마태', '집사', 0],
+    ['예루살렘', '예루살렘1', '작은야고보', '집사', 1], ['예루살렘', '예루살렘1', '다대오', '성도', 0], ['예루살렘', '예루살렘1', '시몬', '성도', 0], ['예루살렘', '예루살렘1', '맛디아', '새가족', 0]
+  ];
+  ensureMemberIds();
+  D.forEach(d => {
+    appendObj(SH.MEMBERS, { '교구': P, '마을': d[0], '사랑방': d[1], '이름': d[2], '직분': d[3], '비고': '체험 데이터', '성도ID': mid() });
+    if (d[4]) appendObj(SH.USERS, { '이름': d[2], '역할': ROLE.LEADER, '교구': P, '사랑방': d[1], '접속코드': code4(), '토큰': newToken() });
+  });
+  // 지난 3주 예시 보고
+  const ps = [['베드로', '어머니 건강 회복을 위해', ''], ['도마', '직장 이직 문제로 기도 부탁드립니다', '기도부탁'], ['맛디아', '처음 교회에 나왔어요. 잘 정착하도록', '심방전화']];
+  for (let w = 1; w <= 3; w++) {
+    const d = new Date(); d.setDate(d.getDate() - d.getDay() - 7 * (w - 1));
+    const date = Utilities.formatDate(d, tz(), 'yyyy-MM-dd');
+    ['갈릴리1', '갈릴리2', '예루살렘1'].forEach((sb, i) => {
+      if (w === 1 && i === 2) return; // 이번 주 예루살렘1은 미제출
+      const ms = D.filter(x => x[1] === sb).map(x => x[2]);
+      const worship = ms.slice(0, ms.length - ((w + i) % 2)), group = ms.slice(0, ms.length - 1);
+      const pr = w === 1 ? ps.filter(p => ms.indexOf(p[0]) >= 0).map((p, k) => ({ id: 'tr' + i + k, who: p[0], text: p[1], req: p[2] })) : [];
+      const clean = { date, parish: P, sarangbang: sb, worship, group, newcomers: [], prayers: pr, note: '', addNewToMembers: false };
+      const id = Utilities.getUuid().slice(0, 8), now = date + ' 14:00';
+      appendObj(SH.REPORTS, { '주일': date, '교구': P, '사랑방': sb, '작성자': D.find(x => x[1] === sb && x[4])[2], '재적': ms.length, '예배출석': worship.length, '사랑방출석': group.length, '새가족수': 0,
+        '예배출석명단': worship.join(', '), '사랑방출석명단': group.join(', '), '결석명단': ms.filter(n => worship.indexOf(n) < 0).join(', '), '새가족': '', '특이사항': '', '부탁': pr.filter(p => p.req).map(p => p.who + '(' + p.req + ')').join(', '),
+        '제출시각': now, '수정시각': now, '기록ID': id, '원본JSON': JSON.stringify(clean) });
+      pr.forEach(p => appendObj(SH.PRAYERS, { '주일': date, '교구': P, '사랑방': sb, '대상': p.who, '기도제목': p.text, '부탁': p.req, '작성자': '', '기록ID': id, '기도ID': p.id }));
+    });
+  }
+}
+
+/** 체험 admin 접속코드를 새로 바꿈 (예전 코드·링크는 막힘) */
+function rotateTrialCode() {
+  const u = rows(SH.USERS).find(x => x['이름'] === 'admin' && x['역할'] === ROLE.ADMIN);
+  if (!u) { SpreadsheetApp.getUi().alert('체험 admin 계정이 없습니다.'); return; }
+  forgetToken(u['토큰']);
+  updateObj(SH.USERS, u._row, { '접속코드': code6(), '토큰': newToken() });
+  fillTokens();
+  const n = rows(SH.USERS).find(x => x['이름'] === 'admin');
+  SpreadsheetApp.getUi().alert('체험 admin 코드를 새로 만들었습니다.\n\n이름: admin   접속코드: ' + n['접속코드'] + (n['개인링크'] ? '\n링크: ' + n['개인링크'] : ''));
+}
+
+/** 체험교구 데이터를 모두 지움 — 실제 사용을 시작할 때 */
+function clearTrial() {
+  const ui = SpreadsheetApp.getUi();
+  if (ui.alert('체험 데이터 지우기', '체험교구(열두 제자)의 계정·명단·보고·기도제목을 모두 지울까요?\n실제 교구 데이터는 그대로 남습니다.', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  [SH.USERS, SH.MEMBERS, SH.REPORTS, SH.PRAYERS, SH.RESP].forEach(name => {
+    const s = sh(name);
+    rows(name).filter(r => r['교구'] === TRIAL_PARISH).map(r => r._row).sort((a, b) => b - a).forEach(r => s.deleteRow(r));
+    flush();
+  });
+  ui.alert('체험 데이터를 지웠습니다. [사용자] 시트에 본인을 관리자로 넣고 메뉴 ② 를 눌러 주세요.');
+}
+function code6() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 /* ───── 명단 도우미 ───── */
 /** 교회 전체 관리자 = 역할 '관리자' + 교구 칸이 비어 있음. 교구가 적힌 관리자는 그 교구만 봄 */
@@ -491,11 +663,12 @@ function auth(req) {
   if (!token) throw new Error('로그인이 필요합니다.');
   const cache = CacheService.getScriptCache();
   const hit = cache.get('tok:' + token);
-  if (hit) return JSON.parse(hit);
+  if (hit) { const c = JSON.parse(hit); licenseGate(c, req.action); return c; }
   const u = rows(SH.USERS).find(x => String(x['토큰']) === token);
   if (!u) throw new Error('로그인 정보가 바뀌었습니다. 다시 로그인해 주세요.');
   const o = {}; HEAD.USERS.forEach(k => o[k] = u[k] instanceof Date ? '' : u[k]);
   try { cache.put('tok:' + token, JSON.stringify(o), 600); } catch (e) { }
+  licenseGate(o, req.action);
   return o;
 }
 function forgetToken(t) { if (t) try { CacheService.getScriptCache().remove('tok:' + t); } catch (e) { } }
@@ -573,6 +746,19 @@ function touch(u) {
     if (n.length) sh(SH.USERS).getRange(n[0], 9).setValue(new Date());
     c.put(k, '1', 1800);
   } catch (e) { }
+}
+
+function serverIdOf(v) {
+  v = String(v || '').trim();
+  const m = v.match(/\/macros\/s\/([\w-]{20,})/);
+  return m ? m[1] : (/^[\w-]{20,}$/.test(v) ? v : '');
+}
+
+function setConfig(key, value) {
+  const s = sh(SH.CONFIG);
+  const r = rows(SH.CONFIG).find(x => x['항목'] === key);
+  if (r) s.getRange(r._row, 2).setValue(value); else s.appendRow([key, value, '']);
+  flush();
 }
 
 function getConfig() {

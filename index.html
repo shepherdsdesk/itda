@@ -61,6 +61,7 @@ textarea{resize:vertical;min-height:84px}
 .btn.soft{background:var(--pri-soft);color:var(--pri)}
 .btn.ghost{background:#f1f2f7;color:var(--ink)}
 .btn.block{width:100%}
+a.btn{text-decoration:none}
 .btn.sm{padding:8px 12px;font-size:13.5px;border-radius:10px}
 .btn[disabled]{opacity:.55}
 .row{display:flex;gap:8px;align-items:center}
@@ -202,10 +203,53 @@ small.note{display:block;color:var(--sub);font-size:12.5px;margin-top:6px}
 
 <script>
 /* ════════════════════════════════════════════════
-   설정: 구글 앱스크립트 '웹 앱' 주소를 넣으세요.
-   비워 두면 체험(데모) 모드로 동작합니다.
+   서버 연결 — 앱 주소는 하나, 서버(구글 시트)는 교구마다 따로.
+   개인 링크의 s=… 에 각 교구 서버(앱스크립트 웹 앱) ID가 들어 있어
+   링크를 누르면 그 교구 서버로 자동 연결됩니다. 한 번 연결되면 이 휴대폰에 기억됩니다.
+   ?demo=1 로 열면 체험 모드.
    ════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxCN9q8gEaQnPNCKjNrd0-8ByH1XE63hChZ5vkapTph8FcPT7V36h9Bg5v4s5Oh4CYU/exec';
+let API_URL = '', SID = '', DEMO = false;
+const serverUrl = id => 'https://script.google.com/macros/s/' + id + '/exec';
+function serverIdOf(v) {
+  v = String(v || '').trim();
+  const m = v.match(/\/macros\/s\/([\w-]{20,})/);
+  return m ? m[1] : (/^[\w-]{20,}$/.test(v) ? v : '');
+}
+function setServer(id) { SID = id; API_URL = id ? serverUrl(id) : ''; if (id) LS.set('server', id); else LS.del('server'); }
+
+/* ───────── 사용 허락(사용키) 안내 — 관리자·목회자 화면에만 ───────── */
+const REQUEST_URL = 'https://mokyangdesk.com/itda.html#request';
+function licBar() {
+  const L = S.me && S.me.license;
+  if (!L || L.blocked || DEMO || S.me.user.role === '사랑방장' || L.state === 'full') return '';
+  const admin = S.me.user.role === '관리자';
+  const keyBtn = admin ? `<button class="btn soft sm" onclick="openKey()">🔑 사용키 넣기</button>` : '';
+  const reqBtn = `<a class="btn ghost sm" href="${REQUEST_URL}" target="_blank" rel="noopener">사용 요청</a>`;
+  if (L.state === 'trial') {
+    const warn = L.daysLeft != null && L.daysLeft <= 2;
+    return `<div class="installbar" style="background:${warn ? 'var(--warn-soft)' : 'var(--pri-soft)'}"><p style="color:${warn ? '#b45309' : 'var(--pri)'}">🧪 7일 체험판 · ${esc(L.until)}까지 (${L.daysLeft}일 남음) — 계속 쓰시려면 정식 사용키를 받아 주세요</p>${reqBtn}</div>`;
+  }
+  const msg = L.state === 'expired' ? `⏰ 7일 체험 기간(${esc(L.until)}까지)이 끝났어요. 정식 사용키를 넣어 주세요.`
+    : L.state === 'invalid' ? '⚠️ 사용키가 [설정] 교회이름과 맞지 않아요. 사용 요청 때 적은 교회이름과 똑같이 맞춰 주세요.'
+    : `🧪 체험판 — ${L.trialData ? '예시 명단(열두 제자)으로 ' : ''}둘러보는 중입니다. 우리 교구 실제 명단을 쓰려면 <b>사용 요청</b> 후 받은 사용키를 넣어 주세요.${admin ? '' : ' (사용키는 관리자가 넣습니다)'}`;
+  return `<div class="card" style="background:${L.state === 'none' ? 'var(--pri-soft)' : 'var(--warn-soft)'};box-shadow:none;padding:14px 16px"><p style="margin:0 0 10px;font-size:14px;color:${L.state === 'none' ? 'var(--pri)' : '#92400e'}">${msg}</p><div class="row">${reqBtn}${keyBtn}</div></div>`;
+}
+function openKey() {
+  openLayer(`<div class="grab"></div><h2>🔑 사용키 넣기</h2><p class="muted">AI목양지원센터에서 받은 사용키를 넣으면 실제 명단 올리기와 모든 기능이 열립니다.</p>
+    <label class="field" style="margin-top:12px"><span>교회이름 — 사용 요청 때 적은 이름과 똑같이</span><input class="input" id="kChurch" value="${esc(S.me.church || '')}" placeholder="예) 할렐루야교회 5교구"></label>
+    <label class="field"><span>사용키</span><input class="input" id="kKey" placeholder="ITDA-T270110-1A2B3C4D" style="font-family:ui-monospace,Menlo,monospace;text-transform:uppercase"></label>
+    <div class="row"><a class="btn ghost grow" href="${REQUEST_URL}" target="_blank" rel="noopener">아직 없어요 — 사용 요청</a><button class="btn pri grow" id="kBtn" onclick="saveKey()">등록</button></div>`);
+}
+async function saveKey() {
+  const b = document.getElementById('kBtn'); b.disabled = true;
+  try {
+    const r = await api('setKey', { key: val('kKey'), church: val('kChurch') });
+    closeLayer();
+    S.me = await api('me', DEMO ? {} : { server: SID, app: location.origin + location.pathname });
+    await refresh();
+    toast(r.state === 'full' ? '정식 사용키가 등록됐어요. 감사합니다 🙏' : `체험판 사용키 등록 — ${r.until}까지 모든 기능을 쓸 수 있어요.`);
+  } catch (e) { toast(e.message); b.disabled = false; }
+}
 
 /* ───────── 만든 곳 · 저작권 ───────── */
 const FOOT = `<div class="foot"><a href="https://mokyangdesk.com" target="_blank" rel="noopener">AI목양지원센터 제작</a> · 만든 사람 이세진 목사<br>© 2026 AI목양지원센터. All rights reserved.</div>`;
@@ -275,29 +319,65 @@ function maybeAutoGuide() {
 /* ───────── API ───────── */
 async function api(action, payload = {}) {
   const body = Object.assign({ action, token: S.token }, payload);
-  if (!API_URL) return Demo.call(body);
+  if (DEMO) return Demo.call(body);
+  if (!API_URL) throw new Error('서버가 연결되지 않았어요. 교구 목회자에게 받은 링크로 들어와 주세요.');
   const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
   const j = await res.json();
-  if (!j.ok) throw new Error(j.error || '오류가 발생했습니다.');
+  if (!j.ok) {
+    const msg = String(j.error || '오류가 발생했습니다.');
+    if (msg.indexOf('LICENSE_STOP|') === 0) {
+      const e = new Error(msg.slice(13)); e.stop = true;
+      if (S.me && S.me.user.role === '관리자') { S.me.license = Object.assign({}, S.me.license, { blocked: true }); setTimeout(render, 0); }
+      else if (S.me) setTimeout(() => renderStop(e.message), 0);
+      throw e;
+    }
+    throw new Error(msg);
+  }
   return j.data;
 }
 
 /* ───────── 시작 ───────── */
 async function boot() {
   const qs = new URLSearchParams(location.search);
-  const t = qs.get('t') || LS.get('token');
+  if (qs.get('demo') === '1') { DEMO = true; }
+  else {
+    const sid = serverIdOf(qs.get('s')) || LS.get('server') || '';
+    if (qs.get('s') && LS.get('server') && serverIdOf(qs.get('s')) !== LS.get('server')) LS.del('token'); // 다른 교구 서버 링크
+    setServer(sid);
+    if (!SID) return renderConnect();
+  }
+  const t = qs.get('t') || (DEMO ? '' : LS.get('token'));
   if (t) {
     S.token = t;
-    try { await loadMe(); return; } catch (e) { S.token = ''; LS.del('token'); toast(e.message); }
+    try { await loadMe(); return; } catch (e) { if (e.stop) return renderStop(e.message); S.token = ''; LS.del('token'); toast(e.message); }
   }
   renderLogin();
 }
 
+/* 사용 기간이 끝났을 때 — 사랑방장·목회자 화면 */
+function renderStop(msg) {
+  $app.innerHTML = `<div class="login-hero"><div class="logo">${logoSvg(34)}</div><h1>잇다</h1><p style="letter-spacing:2px;color:#9aa0b4;margin-top:0">it,da</p></div>
+  <div class="card" style="text-align:center"><div style="font-size:40px">⏸</div><h3 style="justify-content:center">지금은 쉬는 중이에요</h3><p class="muted" style="margin:0">${esc(msg)}</p></div>
+  <div class="row"><button class="btn ghost grow" onclick="location.reload()">다시 확인</button><a class="btn soft grow" href="${REQUEST_URL}" target="_blank" rel="noopener">잇다 알아보기</a></div>
+  ${FOOT}`;
+}
+/* 사용 기간이 끝났을 때 — 관리자 화면: 사용키 넣기만 */
+function renderLocked() {
+  const L = S.me.license;
+  const why = L.state === 'expired' ? `7일 체험 기간(${esc(L.until)}까지)이 끝났어요.` : L.state === 'invalid' ? '사용키가 [설정] 교회이름과 맞지 않아요.' : '아직 사용키가 등록되지 않았어요.';
+  $app.innerHTML = shell(`<div class="card" style="text-align:center"><div style="font-size:40px">🔑</div><h3 style="justify-content:center">${why}</h3>
+    <p class="muted" style="margin:0 0 4px">지금은 사랑방장·목회자 모두 앱에 들어올 수 없습니다. <b>정식 사용키</b>를 넣으면 그동안의 명단과 보고 그대로 바로 다시 열립니다.</p></div>
+    <div class="card"><label class="field" style="margin-top:0"><span>교회이름 — 사용 요청 때 적은 이름과 똑같이</span><input class="input" id="kChurch" value="${esc(S.me.church || '')}"></label>
+      <label class="field"><span>정식 사용키</span><input class="input" id="kKey" placeholder="ITDA-F999999-1A2B3C4D" style="font-family:ui-monospace,Menlo,monospace;text-transform:uppercase"></label>
+      <button class="btn pri block" id="kBtn" onclick="saveKey()">사용키 등록</button></div>
+    <div class="row"><a class="btn soft grow" href="${REQUEST_URL}" target="_blank" rel="noopener">정식 사용 요청</a><button class="btn ghost grow" onclick="logout()">로그아웃</button></div>`);
+}
+
 async function loadMe() {
-  S.me = await api('me');
-  LS.set('token', S.token);
+  S.me = await api('me', DEMO ? {} : { server: SID, app: location.origin + location.pathname });
+  if (!DEMO) LS.set('token', S.token);
   // 주소에 토큰을 남겨 둠 → 아이폰 '홈 화면에 추가' 시 로그인 상태 그대로 설치됨
-  history.replaceState(null, '', location.pathname + '?t=' + encodeURIComponent(S.token));
+  history.replaceState(null, '', location.pathname + '?t=' + encodeURIComponent(S.token) + (DEMO ? '&demo=1' : '&s=' + SID));
   const role = S.me.user.role;
   S.tab = role === '사랑방장' ? 'report' : 'dash';
   if (role === '관리자') S.parish = isChurchAdmin() ? ((S.me.parishes || [])[0] || '') : S.me.user.parish;
@@ -307,6 +387,7 @@ async function loadMe() {
 }
 
 async function refresh() {
+  if (S.me && S.me.license && S.me.license.blocked) return render();
   $app.innerHTML = shell('<div class="spin"></div>');
   try {
     if (S.tab === 'report') {
@@ -333,6 +414,7 @@ async function refresh() {
 /* ───────── 화면 ───────── */
 function render() {
   if (!S.me) return renderLogin();
+  if (S.me.license && S.me.license.blocked) return renderLocked();
   if (S.tab === 'report') return renderReport();
   if (S.tab === 'roster') return renderRoster();
   if (S.tab === 'staff') return renderStaff();
@@ -344,7 +426,8 @@ function shell(inner) {
   const sub = u ? (u.role === '사랑방장' ? `${u.parish} · ${u.sarangbang}` : (u.role === '관리자' ? '관리자' : `${u.parish} 목회자`)) : '';
   return `<header class="top"><div class="brand"><div class="logo">${logoSvg(20)}</div><div><b>잇다 <span style="font-weight:500;color:#9aa0b4;font-size:12px;letter-spacing:.5px">it,da</span></b><small>${esc(S.me && S.me.church ? S.me.church + ' · ' : '')}${esc(sub)}</small></div></div>
   ${u ? `<button class="icon-btn" onclick="openMenu()">${esc(u.name)} ▾</button>` : ''}</header>
-  ${!API_URL ? '<div class="demo">체험 모드입니다. 입력한 내용은 이 기기에만 잠시 저장돼요. (index.html의 API_URL을 넣으면 실제 운영)</div>' : ''}
+  ${licBar()}
+  ${DEMO ? '<div class="demo">체험 모드입니다. 입력한 내용은 이 기기에만 잠시 저장돼요. <a href="./" onclick="LS.del(\'demo\')">체험 끝내기</a></div>' : ''}
   ${inner}${FOOT}`;
 }
 
@@ -358,7 +441,7 @@ function dateBar() {
 
 function renderLogin() {
   $app.innerHTML = `<div class="login-hero"><div class="logo">${logoSvg(34)}</div><h1>잇다</h1><p style="letter-spacing:2px;color:#9aa0b4;margin-top:0">it,da</p><p>사랑방과 목자를 잇는 주일보고</p></div>
-  ${!API_URL ? '<div class="demo">체험 모드 — 사랑방장 <b>홍길동 / 1111</b> · 목회자 <b>이세진 / 0000</b> · 관리자 <b>관리자 / 9999</b></div>' : ''}
+  ${DEMO ? '<div class="demo">체험 모드 — 사랑방장 <b>베드로 / 1111</b> · 목회자 <b>바울 / 0000</b> · 관리자 <b>admin / 9999</b></div>' : ''}
   <div class="card">
     <label class="field"><span>이름</span><input class="input" id="lgName" autocomplete="name" placeholder="예) 홍길동"></label>
     <label class="field"><span>접속코드</span><input class="input" id="lgCode" inputmode="numeric" autocomplete="one-time-code" placeholder="교구 목회자에게 받은 숫자"></label>
@@ -378,7 +461,7 @@ async function doLogin() {
   try {
     const r = await api('login', { name, code });
     S.token = r.token; await loadMe();
-  } catch (e) { toast(e.message); b.disabled = false; b.textContent = '들어가기'; }
+  } catch (e) { if (e.stop) return renderStop(e.message); toast(e.message); b.disabled = false; b.textContent = '들어가기'; }
 }
 
 /* 사랑방장 보고 화면 */
@@ -723,7 +806,7 @@ function summaryText() {
   return L.join('\n');
 }
 function nudgeText() {
-  return `사랑방장님, 이번 주일도 수고 많으셨습니다 🙏\n아직 주일 보고가 올라오지 않아 안내드려요. 홈 화면의 ‘잇다’를 눌러 출석과 기도제목을 올려 주세요.\n${API_URL ? location.origin + location.pathname : ''}`;
+  return `사랑방장님, 이번 주일도 수고 많으셨습니다 🙏\n아직 주일 보고가 올라오지 않아 안내드려요. 홈 화면의 ‘잇다’를 눌러 출석과 기도제목을 올려 주세요.\n${!DEMO && SID ? location.origin + location.pathname + '?s=' + SID : ''}`;
 }
 function copySummary() { copy(summaryText(), '교구 주일 보고가 복사되었습니다. 카톡에 붙여 넣으세요.'); }
 function copyNudge() {
@@ -740,16 +823,40 @@ function openMenu() {
   const u = S.me.user;
   openLayer(`<div class="grab"></div><h2>${esc(u.name)} ${esc(u.role)}님</h2><p class="muted">${esc(u.parish)} ${esc(u.sarangbang || '')}</p>
     ${!isStandalone() ? `<button class="btn soft block" style="margin-top:12px" onclick="closeLayer();doInstall()">📲 홈 화면에 설치</button>` : ''}
+    ${u.role === '관리자' && !DEMO ? `<button class="btn ghost block" style="margin-top:8px" onclick="closeLayer();openKey()">🔑 사용키 넣기${S.me.license && S.me.license.state === 'full' ? ' (정식 등록됨)' : ''}</button>` : ''}
     <button class="btn ghost block" style="margin-top:8px" onclick="closeLayer();refresh()">새로고침</button>
-    <button class="btn ghost block" style="margin-top:8px;color:var(--red)" onclick="logout()">로그아웃</button>`);
+    <button class="btn ghost block" style="margin-top:8px;color:var(--red)" onclick="logout()">로그아웃</button>
+    ${!DEMO ? `<button class="btn ghost block sm" style="margin-top:8px" onclick="LS.del('token');LS.del('server');location.href=location.pathname">다른 교구 서버로 바꾸기</button>` : ''}`);
 }
-function logout() { LS.del('token'); S.token = ''; S.me = null; history.replaceState(null, '', location.pathname); closeLayer(); renderLogin(); }
+function logout() { LS.del('token'); S.token = ''; S.me = null; history.replaceState(null, '', location.pathname + (DEMO ? '?demo=1' : '?s=' + SID)); closeLayer(); renderLogin(); }
+
+/* 서버가 아직 연결되지 않았을 때 (링크 없이 앱 주소로만 들어온 경우) */
+function renderConnect() {
+  $app.innerHTML = `<div class="login-hero"><div class="logo">${logoSvg(34)}</div><h1>잇다</h1><p style="letter-spacing:2px;color:#9aa0b4;margin-top:0">it,da</p><p>사랑방과 목자를 잇는 주일보고</p></div>
+  <div class="card"><h3>📩 받은 링크로 들어와 주세요</h3>
+    <p class="muted" style="margin:0">사랑방장·교구 목회자는 <b>교구에서 보내 준 개인 링크</b>를 누르면 자기 교구로 바로 연결됩니다. 카톡에서 그 링크를 다시 눌러 주세요.</p></div>
+  <div class="card"><h3>⛪ 교구 서버 연결 <span class="hint">설치한 목회자용</span></h3>
+    <p class="muted" style="margin:0 0 10px">앱스크립트에서 배포한 <b>웹 앱 URL</b>을 붙여 넣으면 이 휴대폰이 그 교구 서버로 연결됩니다.</p>
+    <input class="input" id="cUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    <button class="btn pri block" style="margin-top:10px" onclick="doConnect()">연결하기</button></div>
+  <div class="row"><a class="btn ghost grow" href="?demo=1">체험해 보기</a><a class="btn soft grow" href="https://mokyangdesk.com/itda.html" target="_blank" rel="noopener">소개·설치 방법</a></div>
+  <a class="credit" href="https://mokyangdesk.com" target="_blank" rel="noopener"><span class="cl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></span><div><b>AI목양지원센터 제작</b><small>만든 사람 이세진 목사</small></div><em>mokyangdesk.com →</em></a>
+  ${FOOT}`;
+}
+async function doConnect() {
+  const id = serverIdOf(val('cUrl'));
+  if (!id) return toast('웹 앱 URL을 확인해 주세요. (https://script.google.com/macros/s/…/exec)');
+  setServer(id);
+  history.replaceState(null, '', location.pathname + '?s=' + id);
+  try { await api('ping'); toast('교구 서버에 연결됐어요. 이름과 접속코드로 들어가세요.'); renderLogin(); }
+  catch (e) { setServer(''); toast('연결하지 못했어요 — 배포할 때 액세스 권한을 ‘모든 사용자’로 했는지 확인해 주세요.'); }
+}
 
 
 /* ════════════ 명단 관리 (교구 목회자·관리자) ════════════ */
 function koSort(a, b) { return String(a).localeCompare(String(b), 'ko', { numeric: true }); }
 function isLeader(m) { return S.roster.leaders.some(l => l.name === m.name && l.sarangbang === m.sarangbang); }
-function linkOf(token) { return location.origin + location.pathname + '?t=' + encodeURIComponent(token); }
+function linkOf(token) { return location.origin + location.pathname + '?t=' + encodeURIComponent(token) + (SID ? '&s=' + SID : ''); }
 
 /* ── 마을(구역) 묶음: 소속 '5교구 / 이매 / 이매12'의 가운데 칸. 없으면 사랑방 이름 앞부분(이매12 → 이매) ── */
 function areaOf(sb, area) {
@@ -1167,23 +1274,24 @@ function saveDraft() { LS.set(draftKey(), JSON.stringify(S.form.data)); }
 function safeJSON(s) { try { return s ? JSON.parse(s) : null } catch (e) { return null } }
 function logoSvg(n) { return `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M12 17.5s-3.2-1.9-3.2-4a1.8 1.8 0 0 1 3.2-1.1 1.8 1.8 0 0 1 3.2 1.1c0 2.1-3.2 4-3.2 4z" fill="#fff" stroke="none"/></svg>`; }
 
-/* ───────── 체험(데모) 모드 — API_URL이 비어 있을 때만 사용 ───────── */
+/* ───────── 체험(데모) 모드 — ?demo=1 로 열었을 때만 사용 ───────── */
 const Demo = (() => {
   const users = [
-    { name: '홍길동', role: '사랑방장', parish: '5교구', sarangbang: '이매1', code: '1111', token: 'demo-leader', phone: '010-1234-5678', lastSeen: '2026-11-08 13:10' },
-    { name: '최믿음', role: '사랑방장', parish: '5교구', sarangbang: '이매2', code: '2222', token: 'demo-leader2', phone: '010-2345-6789', lastSeen: '' },
-    { name: '이세진', role: '목회자', parish: '5교구', sarangbang: '', code: '0000', token: 'demo-pastor', phone: '' },
-    { name: '관리자', role: '관리자', parish: '5교구', sarangbang: '', code: '9999', token: 'demo-admin', phone: '' }
+    { name: '베드로', role: '사랑방장', parish: '체험교구', sarangbang: '갈릴리1', code: '1111', token: 'demo-leader', phone: '010-0000-0001', lastSeen: '2026-11-08 13:10' },
+    { name: '빌립', role: '사랑방장', parish: '체험교구', sarangbang: '갈릴리2', code: '2222', token: 'demo-leader2', phone: '010-0000-0005', lastSeen: '' },
+    { name: '작은야고보', role: '사랑방장', parish: '체험교구', sarangbang: '예루살렘1', code: '3333', token: 'demo-leader3', phone: '', lastSeen: '' },
+    { name: '바울', role: '목회자', parish: '체험교구', sarangbang: '', code: '0000', token: 'demo-pastor', phone: '' },
+    { name: 'admin', role: '관리자', parish: '체험교구', sarangbang: '', code: '9999', token: 'demo-admin', phone: '' }
   ];
   let seq = 0; const nid = () => 'dm' + (++seq) + Math.random().toString(36).slice(2, 5);
   let members = [
-    ['이매1', '홍길동', '집사', '010-1234-5678'], ['이매1', '김은혜', '권사', '010-1111-2222'], ['이매1', '박소망', '성도', ''], ['이매1', '정사랑', '집사', '010-3333-4444'], ['이매1', '윤기쁨', '성도', ''],
-    ['이매2', '최믿음', '권사', '010-2345-6789'], ['이매2', '한평안', '집사', ''], ['이매2', '오온유', '성도', ''], ['이매2', '서충성', '집사', ''],
-    ['아름1', '강온화', '권사', ''], ['아름1', '임절제', '성도', ''], ['아름1', '조양선', '집사', '']
-  ].map(m => ({ id: nid(), parish: '5교구', sarangbang: m[0], name: m[1], title: m[2], phone: m[3] }));
+    ['갈릴리1', '베드로', '집사', '010-0000-0001'], ['갈릴리1', '안드레', '집사', '010-0000-0002'], ['갈릴리1', '야고보', '성도', ''], ['갈릴리1', '요한', '성도', '010-0000-0004'],
+    ['갈릴리2', '빌립', '권사', '010-0000-0005'], ['갈릴리2', '바돌로매', '집사', ''], ['갈릴리2', '도마', '성도', '010-0000-0007'], ['갈릴리2', '마태', '집사', ''],
+    ['예루살렘1', '작은야고보', '집사', ''], ['예루살렘1', '다대오', '성도', ''], ['예루살렘1', '시몬', '성도', ''], ['예루살렘1', '맛디아', '새가족', '']
+  ].map(m => ({ id: nid(), parish: '체험교구', area: m[0].replace(/\d+$/, ''), sarangbang: m[0], name: m[1], title: m[2], phone: m[3] }));
   const of = sb => members.filter(m => m.sarangbang === sb);
   const sbsOf = () => [...new Set(members.map(m => m.sarangbang).concat(users.filter(u => u.sarangbang).map(u => u.sarangbang)))].sort(koSort);
-  const KEY = 'demo-reports-v4', RKEY = 'demo-resp-v4';
+  const KEY = 'demo-reports-v5', RKEY = 'demo-resp-v5';
   const store = () => safeJSON(LS.get(KEY)) || {};
   const put = o => LS.set(KEY, JSON.stringify(o));
   const rstore = () => safeJSON(LS.get(RKEY)) || {};
@@ -1192,13 +1300,13 @@ const Demo = (() => {
     const o = {}, base = new Date(lastSunday() + 'T00:00:00');
     for (let w = 0; w <= 7; w++) {
       const d = new Date(base); d.setDate(d.getDate() - 7 * w); const ds = fmt(d);
-      ['이매1', '이매2', '아름1'].forEach(sb => {
-        if (w === 0 && sb !== '이매2') return;
+      ['갈릴리1', '갈릴리2', '예루살렘1'].forEach(sb => {
+        if (w === 0 && sb !== '갈릴리2') return;
         const ms = of(sb).map(m => m.name);
         const k = Math.max(1, ms.length - ((w + sb.length) % 3));
-        o[ds + '|' + sb] = { date: ds, parish: '5교구', sarangbang: sb, worship: ms.slice(0, k), group: ms.slice(0, Math.max(1, k - 1)), newcomers: [],
-          prayers: w === 0 ? [{ id: 'd1', who: '한평안', text: '다음 주 화요일 무릎 수술을 받습니다. 수술이 잘 되도록 기도 부탁드립니다.', req: '심방부탁' }, { id: 'd2', who: '사랑방 공동', text: '연말까지 사랑방 모임이 더 따뜻해지도록', req: '' }] : [],
-          note: w === 0 ? '오온유 성도 2주째 결석 — 직장 일로 지쳐 있다고 함' : '', writer: '예시', at: ds + ' 14:00' };
+        o[ds + '|' + sb] = { date: ds, parish: '체험교구', sarangbang: sb, worship: ms.slice(0, k), group: ms.slice(0, Math.max(1, k - 1)), newcomers: [],
+          prayers: w === 0 ? [{ id: 'd1', who: '도마', text: '다음 주 화요일 무릎 수술을 받습니다. 수술이 잘 되도록 기도 부탁드립니다.', req: '심방부탁' }, { id: 'd2', who: '사랑방 공동', text: '연말까지 사랑방 모임이 더 따뜻해지도록', req: '' }] : [],
+          note: w === 0 ? '바돌로매 집사 2주째 결석 — 직장 일로 지쳐 있다고 함' : '', writer: '예시', at: ds + ' 14:00' };
       });
     }
     put(o);
@@ -1210,41 +1318,42 @@ const Demo = (() => {
   const syncLeader = (name, info) => {
     const i = users.findIndex(x => x.role === '사랑방장' && x.name === name);
     if (!info) { if (i >= 0) users.splice(i, 1); return; }
-    if (i >= 0) Object.assign(users[i], info); else users.push(Object.assign({ role: '사랑방장', parish: '5교구', code: String(1000 + Math.floor(Math.random() * 9000)), token: 'demo-' + nid(), lastSeen: '' }, info));
+    if (i >= 0) Object.assign(users[i], info); else users.push(Object.assign({ role: '사랑방장', parish: '체험교구', code: String(1000 + Math.floor(Math.random() * 9000)), token: 'demo-' + nid(), lastSeen: '' }, info));
   };
   const pnorm = v => { const d = String(v || '').replace(/[^0-9]/g, ''); return /^01\d{9}$/.test(d) ? d.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : /^1\d{9}$/.test(d) ? ('0' + d).replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : String(v || ''); };
   return {
     async call(b) {
+      if (b.action === 'ping') return delay({ ok: true });
       if (b.action === 'login') { const u = users.find(x => x.name === b.name && x.code === b.code); if (!u) throw new Error('이름 또는 접속코드가 맞지 않습니다.'); return delay({ token: u.token }); }
       const u = who(b.token);
-      if (b.action === 'me') { u.lastSeen = stamp(); return delay({ user: { name: u.name, role: u.role, parish: u.parish, sarangbang: u.sarangbang }, church: '할렐루야교회', sarangbangs: sbsOf(), parishes: ['5교구'] }); }
+      if (b.action === 'me') { u.lastSeen = stamp(); return delay({ user: { name: u.name, role: u.role, parish: u.parish, sarangbang: u.sarangbang }, church: '잇다 체험', sarangbangs: sbsOf(), parishes: ['체험교구'] }); }
       if (b.action === 'sms') return delay({ list: [{ situation: '환우', title: '(예시) 문자자료 시트에서 온 문안', body: '쉐퍼드 데스크에서 쓰시던 문자를 [문자자료] 시트에 붙여 넣으면 이렇게 맨 위에 나옵니다. {이름}님의 회복을 위해 기도합니다.', verse: '', illus: '📝 문자예화 칸에 넣은 예화는 ‘문자예화 첨부’를 켜면 함께 붙습니다.' }] });
       if (b.action === 'form') {
         const sb = u.role === '사랑방장' ? u.sarangbang : b.sarangbang, k = b.date + '|' + sb, r = store()[k];
-        return delay({ parish: '5교구', sarangbang: sb, date: b.date, members: of(sb).map(m => ({ name: m.name, title: m.title })),
+        return delay({ parish: '체험교구', sarangbang: sb, date: b.date, members: of(sb).map(m => ({ name: m.name, title: m.title })),
           report: r ? { worship: r.worship, group: r.group, newcomers: r.newcomers, prayers: r.prayers, note: r.note, addNewToMembers: true } : null, updatedAt: r ? r.at : '', resp: r ? respOf(k) : null });
       }
       if (b.action === 'save') {
         const r = b.report, sb = u.role === '사랑방장' ? u.sarangbang : r.sarangbang, o = store(), k = r.date + '|' + sb, old = !!o[k];
         o[k] = Object.assign({}, r, { sarangbang: sb, writer: u.name, at: stamp() });
-        if (r.addNewToMembers) r.newcomers.forEach(n => { if (!of(sb).some(m => m.name === n)) members.push({ id: nid(), parish: '5교구', sarangbang: sb, name: n, title: '새가족', phone: '' }); });
+        if (r.addNewToMembers) r.newcomers.forEach(n => { if (!of(sb).some(m => m.name === n)) members.push({ id: nid(), parish: '체험교구', sarangbang: sb, name: n, title: '새가족', phone: '' }); });
         put(o); return delay({ updated: old });
       }
       if (u.role === '사랑방장') throw new Error('목회자만 할 수 있습니다.');
-      if (b.action === 'roster') return delay({ parish: '5교구', members, leaders: users.filter(x => x.role === '사랑방장').map(x => ({ name: x.name, sarangbang: x.sarangbang, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen })), parishes: ['5교구'] });
+      if (b.action === 'roster') return delay({ parish: '체험교구', members, leaders: users.filter(x => x.role === '사랑방장').map(x => ({ name: x.name, sarangbang: x.sarangbang, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen })), parishes: ['체험교구'] });
       if (b.action === 'memberSave') {
         const m = b.member, cur = members.find(x => x.id === m.id);
         if (b.remove) { if (cur) { members = members.filter(x => x !== cur); syncLeader(cur.name, null); } return delay({ ok: true }); }
         const obj = { name: m.name, title: m.title, phone: pnorm(m.phone), sarangbang: m.sarangbang };
         const oldName = cur ? cur.name : m.name;
-        if (cur) Object.assign(cur, obj); else members.push(Object.assign({ id: nid(), parish: '5교구' }, obj));
+        if (cur) Object.assign(cur, obj); else members.push(Object.assign({ id: nid(), parish: '체험교구' }, obj));
         syncLeader(oldName, m.leader ? { name: m.name, sarangbang: m.sarangbang, phone: obj.phone } : null);
         return delay({ ok: true });
       }
       if (b.action === 'rosterImport') {
         let added = 0, updated = 0;
         if (b.mode === 'replace') members = [];
-        b.rows.forEach(r => { const hit = members.find(x => x.name === r.name); if (hit) { Object.assign(hit, { sarangbang: r.sarangbang, title: r.title || hit.title, phone: pnorm(r.phone) || hit.phone }); updated++; } else { members.push({ id: nid(), parish: '5교구', sarangbang: r.sarangbang, name: r.name, title: r.title, phone: pnorm(r.phone) }); added++; } });
+        b.rows.forEach(r => { const hit = members.find(x => x.name === r.name); if (hit) { Object.assign(hit, { sarangbang: r.sarangbang, title: r.title || hit.title, phone: pnorm(r.phone) || hit.phone }); updated++; } else { members.push({ id: nid(), parish: '체험교구', sarangbang: r.sarangbang, name: r.name, title: r.title, phone: pnorm(r.phone) }); added++; } });
         const fl = b.rows.filter(r => r.leader);
         if (fl.length) { if (b.mode === 'replace') users.filter(x => x.role === '사랑방장' && !fl.some(f => f.name === x.name)).forEach(x => syncLeader(x.name, null)); fl.forEach(f => syncLeader(f.name, { name: f.name, sarangbang: f.sarangbang, phone: pnorm(f.phone) })); }
         let pc = 0;
@@ -1261,7 +1370,7 @@ const Demo = (() => {
           else users.push({ name: p.name, parish: p.parish, phone: pnorm(p.phone), role: p.role || '목회자', sarangbang: '', code: '3333', token: 'demo-' + nid(), lastSeen: '' });
           return delay({ ok: true });
         }
-        return delay({ list: users.filter(x => x.role !== '사랑방장').map(x => ({ name: x.name, role: x.role, parish: x.parish, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen || '' })), parishes: ['5교구'] });
+        return delay({ list: users.filter(x => x.role !== '사랑방장').map(x => ({ name: x.name, role: x.role, parish: x.parish, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen || '' })), parishes: ['체험교구'] });
       }
       if (b.action === 'comment' || b.action === 'ack') {
         const k = b.date + '|' + b.sarangbang; if (!store()[k]) throw new Error('아직 제출된 보고가 없습니다.');
@@ -1281,7 +1390,7 @@ const Demo = (() => {
         });
         const trend = [], d0 = new Date(b.date + 'T00:00:00');
         for (let i = 7; i >= 0; i--) { const d = new Date(d0); d.setDate(d.getDate() - 7 * i); const ds = fmt(d); const rs = Object.values(o).filter(r => r.date === ds); trend.push({ date: ds, worship: rs.reduce((a, r) => a + r.worship.length, 0), group: rs.reduce((a, r) => a + r.group.length, 0), count: rs.length }); }
-        return delay({ parish: '5교구', date: b.date, list, trend, pastor: u.name });
+        return delay({ parish: '체험교구', date: b.date, list, trend, pastor: u.name });
       }
       throw new Error('알 수 없는 요청');
     }
