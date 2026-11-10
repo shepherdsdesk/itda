@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>잇다 · 사랑방 주일보고</title>
+<meta name="theme-color" content="#4f46e5">
+<meta name="description" content="잇다(it,da) — 사랑방과 목자를 잇는 주일보고. 예배 출석, 기도제목, 심방 부탁">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="잇다">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>
+/* ── 카카오톡·네이버 등 앱 안 브라우저로 열리면 바깥 브라우저로 자동 전환 (설치하려면 필요) ── */
+(function () {
+  var ua = navigator.userAgent;
+  var android = /Android/i.test(ua);
+  if (/KAKAOTALK/i.test(ua)) {
+    location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+  } else if (android && /NAVER|Instagram|FBAN|FBAV|Line\/|BAND|DaumApps|everytimeApp/i.test(ua)) {
+    location.href = 'intent://' + location.href.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+  }
+})();
+</script>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#fff; --ink:#1e2235; --sub:#6b7085; --line:#e6e8f0;
+  --pri:#4f46e5; --pri2:#2563eb; --pri-soft:#eef0ff; --ok:#059669; --ok-soft:#e7f7f0;
+  --warn:#d97706; --warn-soft:#fff5e6; --red:#dc2626; --red-soft:#fdecec;
+  --r:16px; --shadow:0 1px 2px rgba(20,24,60,.04),0 4px 16px rgba(20,24,60,.05);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 110px)}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 14px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--pri2),var(--pri));display:grid;place-items:center;color:#fff}
+.brand b{display:block;font-size:17px;letter-spacing:-.3px}
+.brand small{display:block;color:var(--sub);font-size:12.5px;margin-top:-2px}
+.icon-btn{border:0;background:transparent;color:var(--sub);padding:8px;border-radius:10px;font-size:14px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:12px}
+.card h3{margin:0 0 12px;font-size:15.5px;letter-spacing:-.2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card h3 .hint{font-weight:500;color:var(--sub);font-size:13px}
+.muted{color:var(--sub);font-size:14px}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13.5px;color:var(--sub);margin-bottom:6px}
+.input,textarea,select{width:100%;border:1px solid var(--line);background:#fbfbfe;border-radius:12px;padding:13px 14px;outline:none;font-size:16px}
+.input:focus,textarea:focus,select:focus{border-color:var(--pri);background:#fff;box-shadow:0 0 0 3px var(--pri-soft)}
+textarea{resize:vertical;min-height:84px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:13px 18px;font-weight:600;font-size:15.5px;cursor:pointer;transition:transform .05s}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:linear-gradient(135deg,var(--pri2),var(--pri));color:#fff}
+.btn.soft{background:var(--pri-soft);color:var(--pri)}
+.btn.ghost{background:#f1f2f7;color:var(--ink)}
+.btn.block{width:100%}
+.btn.sm{padding:8px 12px;font-size:13.5px;border-radius:10px}
+.btn[disabled]{opacity:.55}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+
+/* 주일 선택 */
+.datebar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:8px;margin-bottom:12px}
+.datebar .d{text-align:center}
+.datebar .d b{display:block;font-size:17px}
+.datebar .d small{color:var(--sub);font-size:12.5px}
+.datebar button{width:44px;height:44px;border:0;border-radius:12px;background:#f3f4f9;font-size:18px;color:var(--sub)}
+
+/* 요약 숫자 */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 10px;text-align:center}
+.stat b{display:block;font-size:22px;letter-spacing:-.5px;color:var(--pri)}
+.stat small{color:var(--sub);font-size:12.5px}
+.stats.four{grid-template-columns:repeat(2,1fr)}
+
+/* 출석 명단 */
+.member{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.member:first-of-type{border-top:0}
+.member .nm{flex:1;min-width:0}
+.member .nm b{font-weight:600}
+.member .nm small{color:var(--sub);margin-left:4px;font-size:13px}
+.pill{border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:999px;padding:7px 12px;font-size:13.5px;font-weight:600;min-width:62px}
+.pill.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.pill.on.g{background:var(--ok);border-color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--pri-soft);color:var(--pri);border-radius:999px;padding:6px 10px 6px 12px;font-size:14px;font-weight:600}
+.chip button{border:0;background:transparent;color:inherit;padding:0 2px;font-size:15px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--sub);margin-top:10px}
+.check input{width:18px;height:18px;accent-color:var(--pri)}
+
+/* 기도제목 */
+.prayer{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:#fcfcff}
+.prayer .who{font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.prayer .txt{margin-top:4px;white-space:pre-wrap;font-size:15px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px}
+.tag.v{background:var(--warn-soft);color:var(--warn)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--red-soft);color:var(--red)}
+.tag.p{background:var(--pri-soft);color:var(--pri)}
+
+/* 하단 고정 버튼 */
+.bottom{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);background:linear-gradient(to top,var(--bg) 70%,rgba(246,247,251,0));z-index:20}
+.bottom .in{max-width:560px;margin:0 auto}
+
+/* 목회자 화면 */
+.sb{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.sb:first-of-type{border-top:0}
+.sb .nm{flex:1}
+.sb .nm b{display:block}
+.sb .nm small{color:var(--sub);font-size:13px}
+.sb .num{text-align:right;font-size:13px;color:var(--sub)}
+.sb .num b{font-size:16px;color:var(--ink)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:6px}
+.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bars .b i{display:block;width:100%;max-width:26px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--pri2),var(--pri));min-height:3px}
+.bars .b.cur i{background:linear-gradient(180deg,#7c3aed,var(--pri))}
+.bars .b em{font-style:normal;font-size:11.5px;color:var(--sub);margin-top:4px}
+.bars .b span{font-size:11.5px;font-weight:700;margin-bottom:2px}
+.seg{display:flex;background:#eceef6;border-radius:12px;padding:4px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px;font-weight:600;color:var(--sub);font-size:14.5px}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+
+/* 시트(모달) */
+.dim{position:fixed;inset:0;background:rgba(20,22,40,.38);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fd .15s}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);max-height:88vh;overflow:auto;animation:up .2s ease-out}
+.sheet h2{margin:0 0 6px;font-size:19px;letter-spacing:-.3px}
+.grab{width:40px;height:5px;border-radius:9px;background:#dfe1ea;margin:-6px auto 14px}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fd{from{opacity:0}}
+.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0}
+.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.steps li:first-child{border-top:0}
+.steps li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--pri-soft);color:var(--pri);font-weight:700;display:grid;place-items:center;font-size:14px}
+.share-ico{display:inline-block;vertical-align:-4px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 92px);transform:translateX(-50%);background:#1e2235;color:#fff;padding:11px 18px;border-radius:12px;font-size:14.5px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:90vw;text-align:center}
+.installbar{display:flex;align-items:center;gap:10px;background:var(--pri-soft);border-radius:14px;padding:10px 12px;margin-bottom:12px}
+.installbar p{margin:0;flex:1;font-size:14px;color:var(--pri);font-weight:600}
+.empty{text-align:center;color:var(--sub);padding:18px 0;font-size:14.5px}
+.login-hero{text-align:center;padding:36px 0 22px}
+.login-hero .logo{width:64px;height:64px;border-radius:18px;margin:0 auto 14px}
+.login-hero h1{margin:0;font-size:24px;letter-spacing:-.5px}
+.login-hero p{margin:6px 0 0;color:var(--sub)}
+.demo{background:var(--warn-soft);color:#92400e;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:12px}
+.spin{width:22px;height:22px;border:3px solid var(--pri-soft);border-top-color:var(--pri);border-radius:50%;animation:sp .7s linear infinite;margin:40px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.foot{text-align:center;color:#a3a7b8;font-size:12px;margin-top:22px}
+.seg button{padding:9px 4px;font-size:14px}
+.mrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.mrow:first-of-type{border-top:0}
+.mrow .nm{flex:1;min-width:0}
+.mrow .nm small{color:var(--sub);font-size:13px;margin-left:4px}
+.mrow .ph{color:var(--sub);font-size:13px}
+.star{color:#f59e0b}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.map{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin-bottom:8px;font-size:14px}
+.map select{padding:9px 10px;font-size:14px}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;font-size:14.5px;cursor:pointer}
+.radio input{margin-top:3px;accent-color:var(--pri)}
+.radio small{display:block;color:var(--sub);font-size:13px}
+table.pv{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+table.pv td,table.pv th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+table.pv th{color:var(--sub);font-weight:600}
+.reqs{display:flex;gap:6px;flex-wrap:wrap}
+.reqbtn{flex:1;min-width:92px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 6px;font-weight:600;font-size:14px;color:var(--sub)}
+.reqbtn.on{border-color:#f59e0b;background:var(--warn-soft);color:#b45309}
+.acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.acts .btn{flex:1;text-decoration:none;min-width:84px}
+.btn.done{background:var(--ok-soft);color:var(--ok)}
+.tag.wait{background:#f1f2f7;color:var(--sub)}
+.comment{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid #e0e4ff}
+.comment .h{font-size:13.5px;font-weight:700;color:var(--pri);display:flex;justify-content:space-between}
+.comment .h small{font-weight:500;color:var(--sub)}
+.comment .t{margin-top:6px;white-space:pre-wrap}
+.sitchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
+.sitchips button{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:14px;font-weight:600;color:var(--sub)}
+.sitchips button.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.tpl{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px;font-size:14px;cursor:pointer}
+.tpl.on{border-color:var(--pri);background:var(--pri-soft)}
+.tpl b{display:block;font-size:13.5px}
+.tpl small{color:var(--sub)}
+small.note{display:block;color:var(--sub);font-size:12.5px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="spin"></div></div>
+<div id="layer"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   설정: 구글 앱스크립트 '웹 앱' 주소를 넣으세요.
+   비워 두면 체험(데모) 모드로 동작합니다.
+   ════════════════════════════════════════════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxCN9q8gEaQnPNCKjNrd0-8ByH1XE63hChZ5vkapTph8FcPT7V36h9Bg5v4s5Oh4CYU/exec';
+
+/* ───────── 상태 ───────── */
+const S = { token: '', me: null, date: lastSunday(), tab: 'report', form: null, dash: null, target: null, busy: false };
+const $app = document.getElementById('app');
+const $layer = document.getElementById('layer');
+const LS = { get(k) { try { return localStorage.getItem(k) } catch (e) { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch (e) { } }, del(k) { try { localStorage.removeItem(k) } catch (e) { } } };
+
+/* ───────── 기기 판별 · 홈 화면 설치 ───────── */
+const UA = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/i.test(UA);
+const isInApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|BAND|DaumApps/i.test(UA);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; LS.set('installed', '1'); closeLayer(); toast('홈 화면에 설치되었습니다 🙌'); render(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+
+async function doInstall() {
+  if (installEvt) {
+    installEvt.prompt();
+    const r = await installEvt.userChoice.catch(() => ({}));
+    if (r && r.outcome === 'accepted') LS.set('installed', '1');
+    installEvt = null; closeLayer(); render();
+  } else openInstallGuide();
+}
+
+function openInstallGuide() {
+  const shareSvg = '<svg class="share-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  let body;
+  if (isIOS && isInApp) {
+    body = `<p class="muted">지금은 다른 앱 안에서 열려 있어요. 오른쪽 아래(또는 위) <b>···</b> 메뉴에서 <b>‘Safari로 열기’</b>를 누른 뒤 다시 설치해 주세요.</p>`;
+  } else if (isIOS) {
+    body = `<ol class="steps">
+      <li><div>화면 아래(아이패드는 위) 가운데의 <b>공유 버튼</b> ${shareSvg} 을 누르세요.</div></li>
+      <li><div>목록을 조금 내려 <b>‘홈 화면에 추가’</b>를 누르세요.</div></li>
+      <li><div>오른쪽 위 <b>‘추가’</b>를 누르면 끝! 홈 화면의 <b>잇다</b> 아이콘으로 바로 들어옵니다.</div></li></ol>
+      <p class="muted">아이폰은 애플 정책상 앱이 스스로 설치될 수 없어서, 이 세 단계만 한 번 해 주시면 됩니다. 로그인은 그대로 유지돼요.</p>`;
+  } else if (isAndroid) {
+    body = `<ol class="steps">
+      <li><div>오른쪽 위 <b>⋮ 메뉴</b>(삼성 인터넷은 아래 <b>≡</b>)를 누르세요.</div></li>
+      <li><div><b>‘홈 화면에 추가’</b> 또는 <b>‘앱 설치’</b>를 누르세요.</div></li>
+      <li><div><b>‘설치/추가’</b>를 누르면 홈 화면에 아이콘이 생깁니다.</div></li></ol>`;
+  } else {
+    body = `<p class="muted">휴대폰에서 이 링크를 열면 홈 화면에 앱처럼 설치할 수 있어요. 컴퓨터에서는 주소창 오른쪽의 설치 아이콘을 눌러 주세요.</p>`;
+  }
+  openLayer(`<div class="grab"></div><h2>홈 화면에 ‘잇다’ 놓기</h2>${body}
+    <button class="btn ghost block" onclick="LS.set('installSkip', Date.now());closeLayer()">나중에 할게요</button>`);
+}
+
+function installBar() {
+  if (isStandalone() || LS.get('installed')) return '';
+  if (installEvt) return `<div class="installbar"><p>📲 홈 화면에 앱으로 설치하면 다음부터 한 번에 들어와요</p><button class="btn pri sm" onclick="doInstall()">설치</button></div>`;
+  if (isIOS || isAndroid) return `<div class="installbar"><p>📲 홈 화면에 추가하면 다음부터 한 번에 들어와요</p><button class="btn pri sm" onclick="openInstallGuide()">방법</button></div>`;
+  return '';
+}
+function maybeAutoGuide() {
+  if (isStandalone() || LS.get('installed')) return;
+  const skip = Number(LS.get('installSkip') || 0);
+  if (Date.now() - skip < 3 * 864e5) return;
+  setTimeout(() => { if (installEvt) openLayer(`<div class="grab"></div><h2>홈 화면에 설치할까요?</h2><p class="muted">한 번만 설치하면 다음 주일부터는 아이콘만 누르면 바로 보고 화면이 열립니다.</p><div class="row" style="margin-top:14px"><button class="btn ghost grow" onclick="LS.set('installSkip',Date.now());closeLayer()">나중에</button><button class="btn pri grow" onclick="doInstall()">지금 설치</button></div>`); else if (isIOS || isAndroid) openInstallGuide(); }, 700);
+}
+
+/* ───────── API ───────── */
+async function api(action, payload = {}) {
+  const body = Object.assign({ action, token: S.token }, payload);
+  if (!API_URL) return Demo.call(body);
+  const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || '오류가 발생했습니다.');
+  return j.data;
+}
+
+/* ───────── 시작 ───────── */
+async function boot() {
+  const qs = new URLSearchParams(location.search);
+  const t = qs.get('t') || LS.get('token');
+  if (t) {
+    S.token = t;
+    try { await loadMe(); return; } catch (e) { S.token = ''; LS.del('token'); toast(e.message); }
+  }
+  renderLogin();
+}
+
+async function loadMe() {
+  S.me = await api('me');
+  LS.set('token', S.token);
+  // 주소에 토큰을 남겨 둠 → 아이폰 '홈 화면에 추가' 시 로그인 상태 그대로 설치됨
+  history.replaceState(null, '', location.pathname + '?t=' + encodeURIComponent(S.token));
+  const role = S.me.user.role;
+  S.tab = role === '사랑방장' ? 'report' : 'dash';
+  if (role === '관리자') S.parish = (S.me.parishes || [])[0] || '';
+  if (role === '사랑방장') S.target = { parish: S.me.user.parish, sarangbang: S.me.user.sarangbang };
+  await refresh();
+  maybeAutoGuide();
+}
+
+async function refresh() {
+  $app.innerHTML = shell('<div class="spin"></div>');
+  try {
+    if (S.tab === 'report') {
+      if (!S.target) { S.form = null; }
+      else {
+        const f = await api('form', { date: S.date, parish: S.target.parish, sarangbang: S.target.sarangbang });
+        const saved = f.report;
+        const draft = safeJSON(LS.get(draftKey()));
+        const base = draft || saved || { worship: [], group: [], newcomers: [], prayers: [], note: '', addNewToMembers: true };
+        base.prayers = (base.prayers || []).map(normP);
+        S.form = Object.assign({}, f, { data: base, saved: !!saved, isDraft: !!draft && JSON.stringify(draft) !== JSON.stringify(saved) });
+      }
+    } else if (S.tab === 'roster') {
+      S.roster = await api('roster', { parish: S.parish });
+    } else if (S.tab === 'staff') {
+      S.staff = await api('staff');
+    } else {
+      S.dash = await api('dashboard', { date: S.date, parish: S.parish });
+    }
+  } catch (e) { toast(e.message); }
+  render();
+}
+
+/* ───────── 화면 ───────── */
+function render() {
+  if (!S.me) return renderLogin();
+  if (S.tab === 'report') return renderReport();
+  if (S.tab === 'roster') return renderRoster();
+  if (S.tab === 'staff') return renderStaff();
+  renderDash();
+}
+
+function shell(inner) {
+  const u = S.me ? S.me.user : null;
+  const sub = u ? (u.role === '사랑방장' ? `${u.parish} · ${u.sarangbang}` : (u.role === '관리자' ? '관리자' : `${u.parish} 목회자`)) : '';
+  return `<header class="top"><div class="brand"><div class="logo">${logoSvg(20)}</div><div><b>잇다 <span style="font-weight:500;color:#9aa0b4;font-size:12px;letter-spacing:.5px">it,da</span></b><small>${esc(S.me && S.me.church ? S.me.church + ' · ' : '')}${esc(sub)}</small></div></div>
+  ${u ? `<button class="icon-btn" onclick="openMenu()">${esc(u.name)} ▾</button>` : ''}</header>
+  ${!API_URL ? '<div class="demo">체험 모드입니다. 입력한 내용은 이 기기에만 잠시 저장돼요. (index.html의 API_URL을 넣으면 실제 운영)</div>' : ''}
+  ${inner}<div class="foot">만든 사람 촌놈루니</div>`;
+}
+
+function dateBar() {
+  const d = new Date(S.date + 'T00:00:00');
+  const isThis = S.date === lastSunday();
+  return `<div class="datebar"><button onclick="moveWeek(-1)" aria-label="지난주">‹</button>
+  <div class="d"><b>${d.getMonth() + 1}월 ${d.getDate()}일 주일</b><small>${isThis ? '이번 주' : weeksAgo(S.date)}</small></div>
+  <button onclick="moveWeek(1)" aria-label="다음 주" ${isThis ? 'disabled style="opacity:.3"' : ''}>›</button></div>`;
+}
+
+function renderLogin() {
+  $app.innerHTML = `<div class="login-hero"><div class="logo">${logoSvg(34)}</div><h1>잇다</h1><p style="letter-spacing:2px;color:#9aa0b4;margin-top:0">it,da</p><p>사랑방과 목자를 잇는 주일보고</p></div>
+  ${!API_URL ? '<div class="demo">체험 모드 — 사랑방장 <b>홍길동 / 1111</b> · 목회자 <b>이세진 / 0000</b> · 관리자 <b>관리자 / 9999</b></div>' : ''}
+  <div class="card">
+    <label class="field"><span>이름</span><input class="input" id="lgName" autocomplete="name" placeholder="예) 홍길동"></label>
+    <label class="field"><span>접속코드</span><input class="input" id="lgCode" inputmode="numeric" autocomplete="one-time-code" placeholder="교구 목회자에게 받은 숫자"></label>
+    <button class="btn pri block" id="lgBtn" onclick="doLogin()">들어가기</button>
+    <p class="muted" style="margin:12px 0 0;text-align:center">한 번만 로그인하면 이 휴대폰에서는 계속 유지됩니다.</p>
+  </div><div class="foot">만든 사람 촌놈루니</div>`;
+  document.getElementById('lgCode').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+}
+
+async function doLogin() {
+  const name = val('lgName'), code = val('lgCode');
+  const b = document.getElementById('lgBtn'); b.disabled = true; b.textContent = '확인 중…';
+  try {
+    const r = await api('login', { name, code });
+    S.token = r.token; await loadMe();
+  } catch (e) { toast(e.message); b.disabled = false; b.textContent = '들어가기'; }
+}
+
+/* 사랑방장 보고 화면 */
+function renderReport() {
+  const u = S.me.user;
+  let inner = dateBar() + installBar();
+  if (u.role !== '사랑방장') {
+    inner = tabs() + inner;
+    inner += `<div class="card"><label class="field" style="margin:0"><span>대신 작성할 사랑방</span><select onchange="pickTarget(this.value)">
+      <option value="">선택하세요</option>${pastorSbList().map(sb => `<option ${S.target && S.target.sarangbang === sb ? 'selected' : ''}>${esc(sb)}</option>`).join('')}</select></label></div>`;
+  }
+  if (!S.form) { $app.innerHTML = shell(inner + (u.role !== '사랑방장' ? '' : '<div class="empty">정보를 불러오지 못했어요.</div>')); return; }
+  const f = S.form, d = f.data;
+  const enrolled = f.members.length;
+  inner += `<div class="stats">
+    <div class="stat"><b>${d.worship.length}<small style="font-size:13px;color:var(--sub)">/${enrolled}</small></b><small>주일예배</small></div>
+    <div class="stat"><b style="color:var(--ok)">${d.group.length}</b><small>사랑방 모임</small></div>
+    <div class="stat"><b style="color:#7c3aed">${d.newcomers.length}</b><small>새가족·방문</small></div></div>`;
+  if (f.resp && f.resp.comment) inner += `<div class="comment"><div class="h"><span>💬 ${esc(f.resp.by)} 목사님 코멘트</span><small>${esc(f.resp.at)}</small></div><div class="t">${esc(f.resp.comment)}</div></div>`;
+  if (f.saved && !f.isDraft) inner += `<div class="installbar" style="background:var(--ok-soft)"><p style="color:var(--ok)">✓ 제출된 보고입니다${f.updatedAt ? ' · ' + esc(f.updatedAt) : ''}. 고치고 다시 제출할 수 있어요.</p></div>`;
+
+  // 출석
+  inner += `<div class="card"><h3>출석 체크 <span class="row"><button class="btn soft sm" onclick="allIn()">모두 예배 출석</button></span></h3>
+    ${enrolled ? f.members.map((m, i) => {
+      const w = d.worship.includes(m.name), g = d.group.includes(m.name);
+      return `<div class="member"><div class="nm"><b>${esc(m.name)}</b><small>${esc(m.title)}</small></div>
+        <button class="pill ${w ? 'on' : ''}" onclick="tog('worship',${i})">예배</button>
+        <button class="pill g ${g ? 'on g' : ''}" onclick="tog('group',${i})">사랑방</button></div>`;
+    }).join('') : '<div class="empty">명단이 아직 없어요. 교구 목회자에게 명단 등록을 요청해 주세요.</div>'}
+  </div>`;
+
+  // 새가족
+  inner += `<div class="card"><h3>새가족 · 방문자</h3>
+    <div class="row"><input class="input grow" id="ncName" placeholder="이름 입력 후 추가"><button class="btn soft" onclick="addNew()">추가</button></div>
+    ${d.newcomers.length ? `<div class="chips" style="margin-top:10px">${d.newcomers.map((n, i) => `<span class="chip">${esc(n)}<button onclick="delNew(${i})" aria-label="삭제">×</button></span>`).join('')}</div>
+    <label class="check"><input type="checkbox" ${d.addNewToMembers ? 'checked' : ''} onchange="S.form.data.addNewToMembers=this.checked;saveDraft()">다음 주부터 사랑방 명단에 넣기</label>` : ''}
+  </div>`;
+
+  // 기도제목
+  inner += `<div class="card"><h3>기도제목 <span class="hint">목회자에게 부탁도 할 수 있어요</span></h3>
+    ${d.prayers.map((p, i) => {
+      const ack = f.resp && f.resp.acks && f.resp.acks[p.id];
+      const st = p.req ? (ack ? `<span class="tag ok">✓ 목회자 확인 ${esc(String(ack.at).slice(5))}</span>` : (f.saved ? '<span class="tag wait">확인 대기</span>' : '')) : '';
+      return `<div class="prayer"><div class="who"><span>${esc(p.who)}</span>
+      <span class="row"><button class="btn ghost sm" onclick="editPrayer(${i})">수정</button><button class="btn ghost sm" onclick="delPrayer(${i})">삭제</button></span></div>
+      <div class="txt">${esc(p.text)}</div>${p.req ? `<div style="margin-top:8px">${reqTag(p)} ${st}</div>` : ''}
+      <div class="reqs" style="margin-top:10px">${REQS.map(r => `<button class="reqbtn ${p.req === r.k ? 'on' : ''}" onclick="quickReq(${i},'${r.k}')">${r.ico} ${r.k}</button>`).join('')}</div></div>`;
+    }).join('')}
+    <button class="btn soft block" onclick="editPrayer(-1)">＋ 기도제목 추가</button>
+  </div>`;
+
+  // 특이사항
+  inner += `<div class="card"><h3>특이사항 <span class="hint">결석 사유, 환우·이사·출산 소식 등</span></h3>
+    <textarea id="note" placeholder="예) 김은혜 권사님 무릎 수술로 입원 중 (분당서울대병원)" oninput="S.form.data.note=this.value;saveDraft()">${esc(d.note || '')}</textarea></div>`;
+
+  inner += `<div class="bottom"><div class="in"><button class="btn pri block" id="submitBtn" onclick="submitReport()">${f.saved ? '수정해서 다시 제출' : '주일 보고 제출'}</button></div></div>`;
+  $app.innerHTML = shell(inner);
+}
+
+function tog(kind, i) {
+  const n = S.form.members[i].name, arr = S.form.data[kind];
+  const k = arr.indexOf(n); k < 0 ? arr.push(n) : arr.splice(k, 1);
+  if (kind === 'group' && k < 0 && !S.form.data.worship.includes(n)) { /* 모임만 참석도 허용 */ }
+  saveDraft(); renderReport();
+}
+function allIn() { S.form.data.worship = S.form.members.map(m => m.name); saveDraft(); renderReport(); }
+function addNew() {
+  const v = val('ncName'); if (!v) return;
+  if (!S.form.data.newcomers.includes(v)) S.form.data.newcomers.push(v);
+  saveDraft(); renderReport();
+}
+function delNew(i) { S.form.data.newcomers.splice(i, 1); saveDraft(); renderReport(); }
+function delPrayer(i) { if (confirmSoft('이 기도제목을 지울까요?')) { S.form.data.prayers.splice(i, 1); saveDraft(); renderReport(); } }
+
+function quickReq(i, k) {
+  const p = S.form.data.prayers[i]; p.req = p.req === k ? '' : k;
+  saveDraft(); renderReport();
+  if (p.req) toast(`‘${k}’을 표시했어요. 제출하면 목회자에게 전달됩니다.`);
+}
+function pickReq(el) {
+  const on = el.classList.contains('on');
+  document.querySelectorAll('#pReqs .reqbtn').forEach(b => b.classList.remove('on'));
+  if (!on) el.classList.add('on');
+}
+
+function editPrayer(i) {
+  const p = i >= 0 ? S.form.data.prayers[i] : { id: '', who: '', text: '', req: '' };
+  const names = ['사랑방 공동'].concat(S.form.members.map(m => m.name), S.form.data.newcomers);
+  openLayer(`<div class="grab"></div><h2>${i >= 0 ? '기도제목 수정' : '기도제목 추가'}</h2>
+    <label class="field" style="margin-top:12px"><span>누구의 기도제목인가요?</span>
+      <select id="pWho">${names.map(n => `<option ${n === p.who ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+    <label class="field"><span>기도제목</span><textarea id="pText" placeholder="함께 기도할 내용을 적어 주세요">${esc(p.text)}</textarea></label>
+    <div class="field" style="margin-bottom:16px"><span>목회자에게 부탁하기 (필요할 때만 선택)</span>
+      <div class="reqs" id="pReqs">${REQS.map(r => `<button type="button" class="reqbtn ${p.req === r.k ? 'on' : ''}" data-k="${r.k}" onclick="pickReq(this)">${r.ico} ${r.k}</button>`).join('')}</div>
+      <small class="note">📞 심방전화: 목회자가 전화로 안부·기도 · 🙏 기도부탁: 목회자·중보기도 요청 · 🏠 심방부탁: 가정·병원 방문</small></div>
+    <div class="row"><button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" onclick="savePrayer(${i})">저장</button></div>`);
+  setTimeout(() => document.getElementById('pText').focus(), 250);
+}
+function savePrayer(i) {
+  const on = document.querySelector('#pReqs .reqbtn.on');
+  const prev = i >= 0 ? S.form.data.prayers[i] : {};
+  const p = normP({ id: prev.id, who: val('pWho'), text: document.getElementById('pText').value.trim(), req: on ? on.dataset.k : '' });
+  if (!p.text) return toast('기도제목을 적어 주세요.');
+  if (i >= 0) S.form.data.prayers[i] = p; else S.form.data.prayers.push(p);
+  closeLayer(); saveDraft(); renderReport();
+}
+
+async function submitReport() {
+  const f = S.form, b = document.getElementById('submitBtn');
+  if (!f.data.worship.length && !f.data.group.length && !confirmSoft('출석 체크가 하나도 없어요. 그대로 제출할까요?')) return;
+  b.disabled = true; b.textContent = '제출 중…';
+  try {
+    const r = await api('save', { report: Object.assign({}, f.data, { date: f.date, parish: f.parish, sarangbang: f.sarangbang }) });
+    LS.del(draftKey());
+    toast(r.updated ? '수정한 보고가 반영되었습니다 ✓' : '주일 보고가 제출되었습니다. 수고하셨습니다 🙏');
+    await refresh();
+  } catch (e) { toast(e.message + ' (작성 내용은 이 휴대폰에 보관돼 있어요)'); b.disabled = false; b.textContent = '다시 시도'; }
+}
+
+/* 목회자 화면 */
+function tabs() {
+  const admin = S.me.user.role === '관리자';
+  const t = [['dash', '교구 현황'], ['report', '보고 작성'], ['roster', '명단 관리']].concat(admin ? [['staff', '교역자']] : []);
+  let h = `<div class="seg">${t.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" onclick="go('${k}')">${l}</button>`).join('')}</div>`;
+  if (admin && S.tab !== 'staff') h += `<div class="card" style="padding:12px 14px"><select onchange="S.parish=this.value;S.target=null;refresh()">${(S.me.parishes || []).map(p => `<option ${p === S.parish ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
+  return h;
+}
+function pastorSbList() { return S.dash ? S.dash.list.map(x => x.sarangbang) : S.roster ? [...new Set(S.roster.members.map(m => m.sarangbang))].sort(koSort) : (S.me.sarangbangs || []); }
+
+function renderDash() {
+  const D = S.dash;
+  let inner = tabs();
+  inner += dateBar() + installBar();
+  if (!D) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
+  const sub = D.list.filter(x => x.submitted);
+  const tw = sub.reduce((a, x) => a + x.report.worship.length, 0);
+  const tg = sub.reduce((a, x) => a + x.report.group.length, 0);
+  const tn = sub.reduce((a, x) => a + x.report.newcomers.length, 0);
+  const enr = sub.reduce((a, x) => a + x.enrolled, 0);
+  inner += `<div class="stats four">
+    <div class="stat"><b>${sub.length}<small style="font-size:13px;color:var(--sub)">/${D.list.length}</small></b><small>보고 제출</small></div>
+    <div class="stat"><b>${tw}<small style="font-size:13px;color:var(--sub)">${enr ? ' · ' + Math.round(tw / enr * 100) + '%' : ''}</small></b><small>주일예배 출석</small></div>
+    <div class="stat"><b style="color:var(--ok)">${tg}</b><small>사랑방 모임</small></div>
+    <div class="stat"><b style="color:#7c3aed">${tn}</b><small>새가족·방문</small></div></div>`;
+
+  // 사랑방 목록
+  inner += `<div class="card"><h3>사랑방별 현황 <span class="row">
+      ${D.list.some(x => !x.submitted) ? `<button class="btn soft sm" onclick="copyNudge()">미제출 안내 복사</button>` : ''}</span></h3>
+    ${D.list.length ? D.list.map((x, i) => {
+      const asks = x.submitted ? x.report.prayers.filter(p => p.req) : [];
+      const pend = asks.filter(p => !(x.resp && x.resp.acks && x.resp.acks[p.id])).length;
+      return `<div class="sb" onclick="openSb(${i})"><div class="nm"><b>${esc(x.sarangbang)}</b><small>${esc(x.leaders.map(l => l.name).join(', ') || '사랑방장 미지정')} · 재적 ${x.enrolled}</small></div>
+      ${x.submitted ? `<div class="num"><b>${x.report.worship.length}</b> 예배 · <b>${x.report.group.length}</b> 모임<br>${pend ? `<span class="tag v">부탁 ${pend}</span> ` : ''}${x.resp && x.resp.comment ? '<span class="tag p">💬</span> ' : ''}<span class="tag ok">제출</span></div>` : '<span class="tag no">미제출</span>'}</div>`;
+    }).join('') : '<div class="empty">사용자·성도명단 시트에 사랑방을 등록해 주세요.</div>'}
+  </div>`;
+
+  // 사랑방에서 온 부탁 (심방전화·기도부탁·심방부탁)
+  const asks = [];
+  D.list.forEach((x, xi) => x.submitted && x.report.prayers.forEach(p => { if (p.req) asks.push({ xi, p, done: !!(x.resp && x.resp.acks && x.resp.acks[p.id]) }); }));
+  asks.sort((a, b) => a.done - b.done);
+  const notes = sub.filter(x => x.report.note);
+  if (asks.length || notes.length) {
+    const pend = asks.filter(a => !a.done).length;
+    inner += `<div class="card"><h3>사랑방에서 온 부탁 ${pend ? `<span class="tag v">${pend}건 대기</span>` : (asks.length ? '<span class="tag ok">모두 확인</span>' : '')}</h3>
+      ${asks.map(a => askCard(a.xi, a.p)).join('')}
+      ${notes.map(x => `<div class="prayer" style="background:#fffdf7"><div class="who"><span>특이사항</span><span class="tag p">${esc(x.sarangbang)}</span></div><div class="txt">${esc(x.report.note)}</div></div>`).join('')}</div>`;
+  }
+
+  // 기도제목
+  const prs = [];
+  sub.forEach(x => x.report.prayers.forEach(p => { if (!p.req) prs.push({ sb: x.sarangbang, ...p }); }));
+  inner += `<div class="card"><h3>교구 기도제목 <span class="hint">${prs.length}건</span></h3>
+    ${prs.length ? prs.map(p => `<div class="prayer"><div class="who"><span>${esc(p.who)}</span><span class="tag p">${esc(p.sb)}</span></div><div class="txt">${esc(p.text)}</div></div>`).join('') : '<div class="empty">부탁 외의 기도제목이 아직 없어요.</div>'}</div>`;
+
+  // 추이
+  const mx = Math.max(1, ...D.trend.map(t => t.worship));
+  inner += `<div class="card"><h3>최근 8주 주일예배 출석</h3><div class="bars">
+    ${D.trend.map(t => { const dd = new Date(t.date + 'T00:00:00'); return `<div class="b ${t.date === S.date ? 'cur' : ''}"><span>${t.count ? t.worship : ''}</span><i style="height:${t.count ? Math.max(4, t.worship / mx * 80) : 3}%;${t.count ? '' : 'background:#e6e8f0'}"></i><em>${dd.getMonth() + 1}/${dd.getDate()}</em></div>`; }).join('')}
+  </div></div>`;
+
+  inner += `<div class="bottom"><div class="in"><button class="btn pri block" onclick="copySummary()">📋 교구 주일 보고 복사 (담임목사님·단톡방용)</button></div></div>`;
+  $app.innerHTML = shell(inner);
+}
+
+function openSb(i) {
+  S.openIdx = i;
+  const x = S.dash.list[i];
+  if (!x.submitted) {
+    openLayer(`<div class="grab"></div><h2>${esc(x.sarangbang)}</h2><p class="muted">아직 보고가 올라오지 않았어요.</p>
+      ${x.leaders.map(l => `<div class="prayer"><div class="who"><span>${esc(l.name)} 사랑방장</span>${l.phone ? `<span class="row"><a class="btn soft sm" href="tel:${esc(l.phone)}">📞 전화</a><a class="btn soft sm" href="${smsHref(l.phone, nudgeText())}">✉️ 문자</a></span>` : '<small class="muted">연락처 없음</small>'}</div></div>`).join('')}
+      <div class="row" style="margin-top:10px"><button class="btn ghost grow" onclick="closeLayer()">닫기</button><button class="btn pri grow" onclick="closeLayer();pickTargetIdx(${i})">대신 작성</button></div>`, () => S.openIdx = null);
+    return;
+  }
+  const r = x.report, rs = x.resp || {};
+  openLayer(`<div class="grab"></div><h2>${esc(x.sarangbang)}</h2><p class="muted" style="margin:0 0 12px">작성 ${esc(x.writer)} · ${esc(x.updatedAt)}</p>
+    <div class="stats"><div class="stat"><b>${r.worship.length}<small style="font-size:12px;color:var(--sub)">/${x.enrolled}</small></b><small>예배</small></div><div class="stat"><b style="color:var(--ok)">${r.group.length}</b><small>사랑방</small></div><div class="stat"><b style="color:#7c3aed">${r.newcomers.length}</b><small>새가족</small></div></div>
+    <div class="field"><span>주일예배 출석</span><div class="chips">${r.worship.map(n => `<span class="chip">${esc(n)}</span>`).join('') || '<span class="muted">없음</span>'}</div></div>
+    <div class="field"><span>결석</span><div class="chips">${x.absent ? x.absent.split(', ').map(n => `<span class="chip" style="background:#f1f2f7;color:var(--sub)">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'}</div></div>
+    ${r.newcomers.length ? `<div class="field"><span>새가족·방문</span><div class="chips">${r.newcomers.map(n => `<span class="chip" style="background:#f3edff;color:#7c3aed">${esc(n)}</span>`).join('')}</div></div>` : ''}
+    ${r.prayers.length ? `<div class="field"><span>기도제목 · 부탁</span>${r.prayers.map(p => p.req ? askCard(i, p, true) : `<div class="prayer"><div class="who"><span>${esc(p.who)}</span></div><div class="txt">${esc(p.text)}</div><div class="acts"><button class="btn ghost sm" onclick="openSms(${i},'${p.id}')">✉️ 문자</button></div></div>`).join('')}</div>` : ''}
+    ${r.note ? `<div class="field"><span>특이사항</span><div class="prayer"><div class="txt">${esc(r.note)}</div></div></div>` : ''}
+    <div class="field"><span>💬 목회자 코멘트 <small style="color:var(--sub)">— 사랑방장 화면에 그대로 보여요</small></span>
+      <textarea id="cmt" placeholder="예) 수고 많으셨습니다. 김은혜 권사님은 이번 주 목요일에 병원으로 찾아뵙겠습니다.">${esc(rs.comment || '')}</textarea>
+      ${rs.at ? `<small class="note">마지막 작성 ${esc(rs.by)} · ${esc(rs.at)}</small>` : ''}
+      <button class="btn pri block" style="margin-top:8px" id="cmtBtn" onclick="saveComment(${i})">코멘트 남기기</button></div>
+    <div class="row"><button class="btn ghost grow" onclick="closeLayer()">닫기</button><button class="btn soft grow" onclick="closeLayer();pickTargetIdx(${i})">보고 수정하기</button></div>`, () => S.openIdx = null);
+}
+
+/* 부탁 카드: 확인 · 전화 · 문자 */
+function askCard(xi, p, inSheet) {
+  const x = S.dash.list[xi];
+  const ack = x.resp && x.resp.acks && x.resp.acks[p.id];
+  const c = contactOf(x, p.who);
+  return `<div class="prayer" ${ack ? 'style="opacity:.8"' : ''}><div class="who"><span>${esc(p.who)} ${reqTag(p)}</span>${inSheet ? '' : `<span class="tag p">${esc(x.sarangbang)}</span>`}</div>
+    <div class="txt">${esc(p.text)}</div>
+    <div class="acts">
+      <button class="btn sm ${ack ? 'done' : 'pri'}" onclick="toggleAck(${xi},'${p.id}',${!ack})">${ack ? '✓ 확인함 · ' + esc(String(ack.at).slice(5)) : '확인했어요'}</button>
+      ${c.phone ? `<a class="btn ghost sm" href="tel:${esc(c.phone)}">📞 전화</a>` : ''}
+      <button class="btn ghost sm" onclick="openSms(${xi},'${p.id}')">✉️ 문자</button></div>
+    ${c.phone ? (c.viaLeader ? `<small class="note">${esc(c.label)} 연락처로 연결됩니다</small>` : '') : '<small class="note">연락처가 없어요 — [성도명단] 시트 ‘연락처’에 넣으면 바로 전화됩니다</small>'}</div>`;
+}
+
+function contactOf(x, who) {
+  const m = (x.people || []).find(pp => pp.name === who);
+  if (m && m.phone) return { phone: m.phone, name: who, title: m.title || '', viaLeader: false };
+  const l = x.leaders[0];
+  const title = m ? (m.title || '') : '';
+  if (l && l.phone) return { phone: l.phone, name: who === '사랑방 공동' ? l.name : who, title: who === '사랑방 공동' ? '사랑방장' : title, viaLeader: true, label: l.name + ' 사랑방장' };
+  return { phone: '', name: who === '사랑방 공동' && l ? l.name : who, title: who === '사랑방 공동' ? '사랑방장' : title };
+}
+
+async function toggleAck(xi, pid, done) {
+  const x = S.dash.list[xi];
+  try {
+    x.resp = await api('ack', { date: S.date, parish: S.dash.parish, sarangbang: x.sarangbang, prayerId: pid, done });
+    toast(done ? '확인 표시했어요. 사랑방장 화면에도 보입니다 ✓' : '확인을 취소했어요.');
+    renderDash(); if (S.openIdx != null) openSb(S.openIdx);
+  } catch (e) { toast(e.message); }
+}
+
+async function saveComment(i) {
+  const x = S.dash.list[i], b = document.getElementById('cmtBtn');
+  b.disabled = true; b.textContent = '저장 중…';
+  try {
+    x.resp = await api('comment', { date: S.date, parish: S.dash.parish, sarangbang: x.sarangbang, text: document.getElementById('cmt').value });
+    toast('코멘트를 남겼어요. 사랑방장이 앱을 열면 바로 보입니다 💬');
+    renderDash(); openSb(i);
+  } catch (e) { toast(e.message); b.disabled = false; b.textContent = '코멘트 남기기'; }
+}
+
+/* ───────── 상황별 문자 + 문자예화 ───────── */
+async function openSms(xi, pid) {
+  const x = S.dash.list[xi], p = x.report.prayers.find(q => q.id === pid);
+  if (!S.smsSheet) { try { S.smsSheet = (await api('sms')).list || []; } catch (e) { S.smsSheet = []; } }
+  const lib = smsLibrary();
+  const sit = guessSituation(p.text + ' ' + (p.req || ''));
+  const c = contactOf(x, p.who);
+  S.sms = { xi, pid, sit, idx: 0, verse: true, illus: false, lib, name: (c.name + (c.title && c.title !== '성도' ? ' ' + c.title : '')).trim(), phone: c.phone };
+  drawSms();
+}
+function smsLibrary() {
+  const sheet = (S.smsSheet || []).map(t => Object.assign({ from: 'sheet' }, t));
+  return sheet.concat(SMS_LIB);
+}
+function guessSituation(t) {
+  const hit = SMS_LIB.find(s => s.keys && s.keys.test(t));
+  return hit ? hit.situation : '기도';
+}
+function smsTemplates() { return S.sms.lib.filter(t => t.situation === S.sms.sit); }
+function composeSms() {
+  const D = S.dash, m = S.sms, t = smsTemplates()[m.idx] || smsTemplates()[0];
+  if (!t) return '';
+  const nm = m.name || '성도';
+  const fill = s => String(s || '').split('{이름}').join(nm);
+  let out = `${nm}님, 평안하신지요? ${D.parish} ${D.pastor || ''} 목사입니다.\n\n${fill(t.body)}`;
+  if (m.verse && t.verse) out += `\n\n📖 ${fill(t.verse)}`;
+  if (m.illus && t.illus) out += `\n\n${fill(t.illus)}`;
+  return out + `\n\n늘 함께 기도하겠습니다. 🙏`;
+}
+function drawSms() {
+  const m = S.sms, sits = [...new Set(m.lib.map(t => t.situation))];
+  const tpls = smsTemplates(), t = tpls[m.idx] || tpls[0] || {};
+  openLayer(`<div class="grab"></div><h2>✉️ 상황별 문자 보내기</h2>
+    <div class="row" style="margin:10px 0 12px"><input class="input grow" id="smName" value="${esc(m.name)}" placeholder="받는 분 (예: 김은혜 권사)" oninput="S.sms.name=this.value;document.getElementById('smText').value=composeSms()">
+      <input class="input" id="smPhone" style="width:42%" inputmode="tel" value="${esc(m.phone)}" placeholder="010-" oninput="S.sms.phone=this.value"></div>
+    <div class="sitchips">${sits.map(s => `<button class="${s === m.sit ? 'on' : ''}" onclick="S.sms.sit='${esc(s)}';S.sms.idx=0;drawSms()">${esc(s)}</button>`).join('')}</div>
+    ${tpls.length > 1 ? tpls.map((x, i) => `<div class="tpl ${i === m.idx ? 'on' : ''}" onclick="S.sms.idx=${i};drawSms()"><b>${x.from === 'sheet' ? '📁 ' : ''}${esc(x.title)}</b><small>${esc(String(x.body).slice(0, 44))}…</small></div>`).join('') : `<p class="muted" style="margin:0 0 8px">${t.from === 'sheet' ? '📁 문자자료 시트' : '기본 문안'} · ${esc(t.title || '')}</p>`}
+    <label class="check"><input type="checkbox" ${m.verse ? 'checked' : ''} ${t.verse ? '' : 'disabled'} onchange="S.sms.verse=this.checked;drawSms()">말씀 넣기</label>
+    <label class="check" style="margin-bottom:10px"><input type="checkbox" ${m.illus ? 'checked' : ''} ${t.illus ? '' : 'disabled'} onchange="S.sms.illus=this.checked;drawSms()">문자예화 첨부${t.illus ? '' : ' (이 문안엔 예화가 없어요)'}</label>
+    <textarea id="smText" style="min-height:220px">${esc(composeSms())}</textarea>
+    <small class="note">내용은 자유롭게 고쳐서 보내세요. [문자자료] 시트에 쉐퍼드 데스크 문자·예화를 넣으면 📁 표시로 함께 나옵니다.</small>
+    <div class="row" style="margin-top:12px"><button class="btn ghost grow" onclick="copy(document.getElementById('smText').value,'문자가 복사되었습니다. 카톡에도 붙여 넣을 수 있어요.')">복사</button>
+      <button class="btn pri grow" onclick="sendSms()">문자 보내기</button></div>`);
+}
+function sendSms() {
+  const ph = (document.getElementById('smPhone').value || '').trim();
+  const body = document.getElementById('smText').value;
+  if (!ph) { copy(body, '전화번호가 없어 문자를 복사했어요. 카톡이나 문자에 붙여 넣으세요.'); return; }
+  location.href = smsHref(ph, body);
+}
+function smsHref(phone, body) { return `sms:${String(phone).replace(/[^0-9+]/g, '')}${isIOS ? '&' : '?'}body=${encodeURIComponent(body)}`; }
+
+function pickTargetIdx(i) { pickTarget(S.dash.list[i].sarangbang, true); }
+function pickTarget(sb, switchTab) {
+  S.target = sb ? { parish: S.parish || S.me.user.parish, sarangbang: sb } : null;
+  if (switchTab) S.tab = 'report';
+  refresh();
+}
+function go(tab) { S.tab = tab; refresh(); }
+function moveWeek(n) {
+  const d = new Date(S.date + 'T00:00:00'); d.setDate(d.getDate() + n * 7);
+  const v = fmt(d); if (v > lastSunday()) return;
+  S.date = v; refresh();
+}
+
+/* 복사 */
+function summaryText() {
+  const D = S.dash, d = new Date(D.date + 'T00:00:00');
+  const sub = D.list.filter(x => x.submitted);
+  const tw = sub.reduce((a, x) => a + x.report.worship.length, 0), tg = sub.reduce((a, x) => a + x.report.group.length, 0);
+  const L = [`[${D.parish} 주일 보고] ${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`, '',
+    `■ 보고 제출 ${sub.length}/${D.list.length} 사랑방`, `■ 주일예배 출석 ${tw}명 · 사랑방 모임 ${tg}명`, ''];
+  D.list.forEach(x => L.push(x.submitted ? `· ${x.sarangbang}: 예배 ${x.report.worship.length}/${x.enrolled}, 모임 ${x.report.group.length}${x.report.newcomers.length ? ', 새가족 ' + x.report.newcomers.join('·') : ''}` : `· ${x.sarangbang}: 미제출`));
+  const asks = []; sub.forEach(x => x.report.prayers.forEach(p => p.req && asks.push(`· [${p.req}] ${p.who}(${x.sarangbang}) — ${p.text}${x.resp && x.resp.acks && x.resp.acks[p.id] ? ' ✓' : ''}`)));
+  if (asks.length) L.push('', '■ 사랑방 부탁 (심방전화·기도부탁·심방부탁)', ...asks);
+  const notes = sub.filter(x => x.report.note).map(x => `· ${x.sarangbang} — ${x.report.note}`);
+  if (notes.length) L.push('', '■ 특이사항', ...notes);
+  const prs = []; sub.forEach(x => x.report.prayers.forEach(p => !p.req && prs.push(`· ${p.who}(${x.sarangbang}) — ${p.text}`)));
+  if (prs.length) L.push('', '■ 기도제목', ...prs);
+  return L.join('\n');
+}
+function nudgeText() {
+  return `사랑방장님, 이번 주일도 수고 많으셨습니다 🙏\n아직 주일 보고가 올라오지 않아 안내드려요. 홈 화면의 ‘잇다’를 눌러 출석과 기도제목을 올려 주세요.\n${API_URL ? location.origin + location.pathname : ''}`;
+}
+function copySummary() { copy(summaryText(), '교구 주일 보고가 복사되었습니다. 카톡에 붙여 넣으세요.'); }
+function copyNudge() {
+  const miss = S.dash.list.filter(x => !x.submitted);
+  copy(`[미제출: ${miss.map(x => x.sarangbang + (x.leaders[0] ? '(' + x.leaders[0].name + ')' : '')).join(', ')}]\n\n` + nudgeText(), '안내 문구가 복사되었습니다.');
+}
+async function copy(t, msg) {
+  try { await navigator.clipboard.writeText(t); toast(msg); }
+  catch (e) { openLayer(`<div class="grab"></div><h2>아래 내용을 길게 눌러 복사하세요</h2><textarea style="min-height:260px">${esc(t)}</textarea><button class="btn ghost block" style="margin-top:10px" onclick="closeLayer()">닫기</button>`); }
+}
+
+/* 메뉴 */
+function openMenu() {
+  const u = S.me.user;
+  openLayer(`<div class="grab"></div><h2>${esc(u.name)} ${esc(u.role)}님</h2><p class="muted">${esc(u.parish)} ${esc(u.sarangbang || '')}</p>
+    ${!isStandalone() ? `<button class="btn soft block" style="margin-top:12px" onclick="closeLayer();doInstall()">📲 홈 화면에 설치</button>` : ''}
+    <button class="btn ghost block" style="margin-top:8px" onclick="closeLayer();refresh()">새로고침</button>
+    <button class="btn ghost block" style="margin-top:8px;color:var(--red)" onclick="logout()">로그아웃</button>`);
+}
+function logout() { LS.del('token'); S.token = ''; S.me = null; history.replaceState(null, '', location.pathname); closeLayer(); renderLogin(); }
+
+
+/* ════════════ 명단 관리 (교구 목회자·관리자) ════════════ */
+function koSort(a, b) { return String(a).localeCompare(String(b), 'ko', { numeric: true }); }
+function isLeader(m) { return S.roster.leaders.some(l => l.name === m.name && l.sarangbang === m.sarangbang); }
+function linkOf(token) { return location.origin + location.pathname + '?t=' + encodeURIComponent(token); }
+
+function renderRoster() {
+  const R = S.roster;
+  let inner = tabs();
+  if (!R) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
+  const groups = {};
+  R.members.forEach(m => (groups[m.sarangbang] = groups[m.sarangbang] || []).push(m));
+  const sbs = Object.keys(groups).sort(koSort);
+  inner += `<div class="stats"><div class="stat"><b>${sbs.length}</b><small>사랑방</small></div><div class="stat"><b>${R.members.length}</b><small>성도</small></div><div class="stat"><b style="color:#d97706">${R.leaders.length}</b><small>사랑방장</small></div></div>`;
+
+  inner += `<div class="card"><h3>📤 명단 파일 올리기</h3>
+    <p class="muted" style="margin:0 0 12px">교회 시스템에서 내려받은 <b>엑셀(xlsx)·CSV</b>를 그대로 올리세요. 이름·사랑방·직분·연락처 칸을 자동으로 찾아 주고, 반영 전에 미리 보여 드려요.</p>
+    <div class="row"><label class="btn pri grow filebtn">파일 선택<input type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="pickFile(this)"></label><button class="btn ghost" onclick="downloadTemplate()">빈 양식 받기</button></div></div>`;
+
+  inner += `<div class="card"><h3>🔗 사랑방장 링크 보내기 ${R.leaders.length ? '<button class="btn soft sm" onclick="copyAllLinks()">전체 복사</button>' : ''}</h3>
+    ${R.leaders.length ? `<p class="muted" style="margin:0 0 6px">링크를 받은 사랑방장은 <b>로그인 없이</b> 자기 사랑방 보고 화면으로 바로 들어옵니다.</p>` + R.leaders.slice().sort((a, b) => koSort(a.sarangbang, b.sarangbang)).map(l => {
+      const i = R.leaders.indexOf(l);
+      return `<div class="mrow" style="cursor:default"><div class="nm"><b>${esc(l.name)}</b><small>${esc(l.sarangbang)}</small><br>${l.lastSeen ? `<span class="tag ok">접속함 · ${esc(String(l.lastSeen).slice(5, 10))}</span>` : '<span class="tag wait">아직 안 들어옴</span>'}</div>
+        <button class="btn soft sm" onclick="shareInvite(${i})">카톡 공유</button>${l.phone ? `<a class="btn ghost sm" href="${smsHref(l.phone, inviteText(l))}">문자</a>` : ''}</div>`;
+    }).join('') : '<div class="empty">아래 명단에서 성도를 눌러 <b>★ 사랑방장</b>으로 지정하면 링크가 만들어져요.</div>'}</div>`;
+
+  inner += sbs.map(sb => {
+    const ms = groups[sb].slice().sort((a, b) => (isLeader(b) - isLeader(a)) || koSort(a.name, b.name));
+    const lds = ms.filter(isLeader).map(m => m.name);
+    return `<div class="card"><h3><span>${esc(sb)} <span class="hint">${ms.length}명${lds.length ? ' · 사랑방장 ' + esc(lds.join(', ')) : ' · <span style="color:var(--red)">사랑방장 없음</span>'}</span></span><button class="btn soft sm" onclick="editMember('', ${JSON.stringify(sb).replace(/"/g, '&quot;')})">＋ 추가</button></h3>
+      ${ms.map(m => `<div class="mrow" onclick="editMember('${m.id}')"><div class="nm">${isLeader(m) ? '<span class="star">★</span> ' : ''}<b>${esc(m.name)}</b><small>${esc(m.title)}</small></div><div class="ph">${esc(m.phone || '연락처 없음')}</div></div>`).join('')}</div>`;
+  }).join('') || '<div class="card"><div class="empty">아직 명단이 없어요. 위에서 엑셀 파일을 올리거나 아래 버튼으로 한 명씩 추가하세요.</div></div>';
+
+  inner += `<button class="btn ghost block" onclick="editMember('', '')">＋ 새 사랑방 만들기 / 성도 추가</button>`;
+  $app.innerHTML = shell(inner);
+}
+
+function editMember(id, sb) {
+  const R = S.roster;
+  const m = id ? R.members.find(x => x.id === id) : { id: '', name: '', title: '', phone: '', sarangbang: sb || '' };
+  const lead = id ? isLeader(m) : false;
+  const sbs = [...new Set(R.members.map(x => x.sarangbang))].sort(koSort);
+  const isNew = !m.sarangbang;
+  openLayer(`<div class="grab"></div><h2>${id ? '성도 정보' : '성도 추가'}</h2>
+    <div class="row" style="margin-top:12px"><label class="field grow"><span>이름</span><input class="input" id="mName" value="${esc(m.name)}"></label>
+      <label class="field" style="width:38%"><span>직분</span><input class="input" id="mTitle" value="${esc(m.title)}" placeholder="집사"></label></div>
+    <label class="field"><span>연락처</span><input class="input" id="mPhone" inputmode="tel" value="${esc(m.phone)}" placeholder="010-0000-0000"></label>
+    <label class="field"><span>사랑방</span><select id="mSb" onchange="document.getElementById('mSbNewWrap').style.display=this.value==='__new'?'block':'none'">
+      ${sbs.map(x => `<option ${x === m.sarangbang ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new" ${isNew ? 'selected' : ''}>＋ 새 사랑방 만들기</option></select></label>
+    <label class="field" id="mSbNewWrap" style="display:${isNew ? 'block' : 'none'}"><span>새 사랑방 이름</span><input class="input" id="mSbNew" placeholder="예) 7사랑방"></label>
+    <label class="radio" style="background:${lead ? 'var(--warn-soft)' : '#fff'}"><input type="checkbox" id="mLeader" ${lead ? 'checked' : ''}><div><b>★ 사랑방장으로 지정</b><small>지정하면 이 분 전용 보고 링크가 만들어집니다. 해제하면 링크가 막혀요.</small></div></label>
+    ${lead ? `<button class="btn ghost block" style="margin-bottom:8px" onclick="resetLink('${esc(m.name)}')">🔄 링크 새로 만들기 (휴대폰 교체·링크 유출 시)</button>` : ''}
+    <div class="row">${id ? `<button class="btn ghost" style="color:var(--red)" onclick="removeMember('${id}')">삭제</button>` : ''}<button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" id="mSave" onclick="saveMember('${id}')">저장</button></div>`);
+}
+
+async function saveMember(id) {
+  const sel = val('mSb'), sb = sel === '__new' ? val('mSbNew') : sel;
+  const member = { id, name: val('mName'), title: val('mTitle'), phone: val('mPhone'), sarangbang: sb, leader: document.getElementById('mLeader').checked };
+  if (!member.name || !member.sarangbang) return toast('이름과 사랑방을 적어 주세요.');
+  const wasLeader = id ? isLeader(S.roster.members.find(x => x.id === id)) : false;
+  const b = document.getElementById('mSave'); b.disabled = true;
+  try {
+    await api('memberSave', { parish: S.roster.parish, member });
+    closeLayer(); S.roster = await api('roster', { parish: S.parish }); renderRoster();
+    if (member.leader && !wasLeader) {
+      const i = S.roster.leaders.findIndex(l => l.name === member.name);
+      if (i >= 0) openLayer(`<div class="grab"></div><h2>★ ${esc(member.name)} 사랑방장 지정 완료</h2><p class="muted">이제 이 분께 링크를 보내 주세요. 링크를 누르면 로그인 없이 ${esc(member.sarangbang)} 보고 화면이 열립니다.</p>
+        <div class="row" style="margin-top:12px"><button class="btn ghost grow" onclick="closeLayer()">나중에</button><button class="btn pri grow" onclick="shareInvite(${i})">카톡으로 보내기</button></div>`);
+    } else toast('저장했어요.');
+  } catch (e) { toast(e.message); b.disabled = false; }
+}
+async function removeMember(id) {
+  const m = S.roster.members.find(x => x.id === id);
+  if (!confirm(`${m.name} 님을 명단에서 지울까요?${isLeader(m) ? '\n(사랑방장 링크도 함께 막힙니다)' : ''}`)) return;
+  try { await api('memberSave', { parish: S.roster.parish, member: { id }, remove: true }); closeLayer(); S.roster = await api('roster', { parish: S.parish }); renderRoster(); toast('지웠어요.'); }
+  catch (e) { toast(e.message); }
+}
+async function resetLink(name) {
+  if (!confirm(`${name} 사랑방장의 링크를 새로 만들까요?\n예전 링크로는 더 이상 들어올 수 없어요.`)) return;
+  try { await api('resetLink', { parish: S.roster.parish, name }); S.roster = await api('roster', { parish: S.parish }); closeLayer(); renderRoster(); const i = S.roster.leaders.findIndex(l => l.name === name); if (i >= 0) shareInvite(i); }
+  catch (e) { toast(e.message); }
+}
+
+function inviteText(l, pastor) {
+  return `${l.name} ${pastor ? '목사' : '사랑방장'}님, 평안하세요? 🙏\n이제 ${pastor ? '교구 주일보고를' : '사랑방 주일 보고를'} ‘잇다’에서 ${pastor ? '확인해' : '올려'} 주세요.\n\n아래 링크를 누르면 로그인 없이 바로 ${pastor ? l.parish + ' 현황' : l.sarangbang + ' 보고'} 화면이 열립니다. 처음 한 번만 ‘홈 화면에 추가’를 해 두시면 다음부터는 아이콘만 누르시면 돼요.\n\n${linkOf(l.token)}`;
+}
+async function shareText(t) {
+  if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  copy(t, '초대 문구를 복사했어요. 카톡에 붙여 넣으세요.');
+}
+function shareInvite(i) { closeLayer(); shareText(inviteText(S.roster.leaders[i])); }
+function copyAllLinks() {
+  const L = S.roster.leaders.slice().sort((a, b) => koSort(a.sarangbang, b.sarangbang));
+  copy(`[${S.roster.parish} 사랑방장 ‘잇다’ 링크]\n각자 자기 이름 링크를 눌러 주세요. 처음 한 번만 ‘홈 화면에 추가’ 해 주시면 됩니다 🙏\n\n` + L.map(l => `· ${l.sarangbang} ${l.name}\n${linkOf(l.token)}`).join('\n\n'), '전체 링크를 복사했어요. 사랑방장 단톡방에 붙여 넣으세요.');
+}
+
+/* ── 엑셀·CSV 읽기 ── */
+async function pickFile(inp) {
+  const f = inp.files && inp.files[0]; inp.value = '';
+  if (!f) return;
+  toast('파일을 읽고 있어요…');
+  try { const table = await readTable(f); if (!table.length) throw new Error('빈 파일이에요.'); openImport(table, f.name); }
+  catch (e) { toast(e.message || '파일을 읽지 못했어요.'); }
+}
+async function readTable(f) {
+  const buf = await f.arrayBuffer();
+  if (/\.csv$/i.test(f.name) || f.type === 'text/csv') {
+    let t = new TextDecoder('utf-8').decode(buf);
+    if (t.includes('�')) t = new TextDecoder('euc-kr').decode(buf); // 엑셀에서 저장한 한글 CSV
+    return parseCSV(t.replace(/^﻿/, ''));
+  }
+  await loadXLSX();
+  const wb = XLSX.read(buf, { type: 'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+}
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => no(new Error('엑셀 읽기 도구를 불러오지 못했어요. 인터넷 연결을 확인하거나 CSV로 저장해 올려 주세요.')); document.head.appendChild(sc); });
+}
+function parseCSV(t) {
+  const out = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',' || c === '\t') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); out.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); out.push(row); }
+  return out.filter(r => r.some(c => String(c).trim()));
+}
+
+/* 칸 자동 찾기 — 교회 시스템 내보내기(소속(주요항목)·그룹직책·교회직분·핸드폰)와 일반 양식 모두 */
+const COLS = [
+  { k: 'name', label: '이름 *', re: [/^(이름|성명|성함|성도명)$/, /이름|성명|성함/] },
+  { k: 'org', label: '소속 (교구·사랑방)', re: [/소속|주요항목/] },
+  { k: 'sarangbang', label: '사랑방', re: [/사랑방(?!장)|구역(?!장)|목장(?!장)|소그룹|^순$|^셀$|속회/] },
+  { k: 'parish', label: '교구', re: [/^교구$/, /교구(?!목사|장)/] },
+  { k: 'role', label: '직책 (사랑방장·교구목사)', re: [/그룹직책/, /직책|역할|사랑방장|방장|구역장|리더/] },
+  { k: 'title', label: '직분', re: [/교회직분/, /직분/] },
+  { k: 'phone', label: '연락처', re: [/핸드폰|휴대폰|휴대전화|모바일|^hp$/i, /연락처|전화/] }
+];
+function detectMap(row) {
+  const map = {}, used = new Set(), H = row.map(h => String(h || '').replace(/\s/g, ''));
+  COLS.forEach(c => { for (const re of c.re) { const i = H.findIndex((h, j) => h && !used.has(j) && re.test(h)); if (i >= 0) { map[c.k] = i; used.add(i); break; } } });
+  return map;
+}
+function openImport(table, fname) {
+  let hi = -1, best = 0;
+  table.slice(0, 10).forEach((r, i) => { const m = detectMap(r); const n = Object.keys(m).length; if (m.name != null && n > best) { best = n; hi = i; } });
+  // 제목 줄(예: '5교구')에서 교구 이름 찾기 — 소속 칸에 교구가 없을 때 사용
+  let fileParish = '';
+  table.slice(0, Math.max(hi, 0)).forEach(r => r.forEach(c => { const pp = parseOrg(c).parish; if (pp && !fileParish) fileParish = pp; }));
+  S.imp = { table, fname, hi, fileParish, map: hi >= 0 ? detectMap(table[hi]) : {}, mode: 'merge', all: S.me.user.role === '관리자' };
+  drawImport();
+}
+/** 소속 칸 해석: "5교구 3사랑방", "5교구>3사랑방", "할렐루야교회/5교구/3사랑방", "5-3" 등 */
+function parseOrg(v) {
+  const t = String(v || '').trim();
+  if (!t) return { parish: '', sarangbang: '' };
+  // 교회 시스템 형식: "5교구 / 아름 / 아름12", "5교구 / 여수11", "5교구 / 2025청장년 / 에스라" → 마지막 칸이 사랑방
+  if (/[\/>]/.test(t)) {
+    const seg = t.split(/\s*[\/>]\s*/).map(x => x.trim()).filter(Boolean);
+    const pi = seg.findIndex(x => /교구$/.test(x.replace(/\s/g, '')));
+    const parish = pi >= 0 ? seg[pi].replace(/\s/g, '') : '';
+    const rest = seg.filter((x, i) => i !== pi && !/교회$/.test(x));
+    return { parish, sarangbang: rest.length ? sbNorm(rest[rest.length - 1]) : '', area: rest.length > 1 ? rest.slice(0, -1).join(' ') : '' };
+  }
+  const pm = t.match(/([0-9가-힣A-Za-z]+?)\s*교구/);
+  let parish = pm ? pm[1].replace(/\s/g, '') + '교구' : '';
+  let sb = '';
+  const sm = t.match(/([0-9가-힣A-Za-z()]+?)\s*(사랑방|구역|목장|셀|순|소그룹)(?!장)/);
+  if (sm) sb = sm[1] + sm[2];
+  else {
+    const parts = t.split(/\s*[>\/\-·,|]\s*|\s+/).filter(Boolean);
+    const rest = parts.filter(x => !/교구$|교회$/.test(x));
+    if (!parish && parts.length >= 2 && /^\d+$/.test(parts[0])) parish = parts[0] + '교구';
+    if (rest.length) sb = rest[rest.length - 1];
+    if (parts.length >= 2 && /^\d+$/.test(parts[0]) && rest.length === parts.length) sb = parts[parts.length - 1];
+  }
+  return { parish, sarangbang: sbNorm(sb) };
+}
+function roleOf(v, title) {
+  const t = String(v || '').replace(/\s/g, ''), ti = String(title || '').replace(/\s/g, '');
+  // 교회 시스템: 그룹직책 '목회자' + 교회직분 '교구목사'
+  if (/목회자|교구목사|담당목사|교구담당|교역자|^목사$|부목사|전도사|강도사/.test(t)) return 'pastor';
+  if (/교구목사|담당목사|^목사$|부목사|전도사|강도사/.test(ti)) return 'pastor';
+  if (/^부/.test(t)) return '';
+  if (/사랑방장|방장|순장|구역장|목장장|목자|리더|^(o|y|yes|예|1|v|✓|✔|●|○|◯)$/i.test(t)) return 'leader';
+  if (!t && /사랑방장/.test(ti)) return 'leader';
+  return '';
+}
+function sbNorm(v) { v = String(v || '').trim(); return /^\d+$/.test(v) ? v + '사랑방' : v; }
+function digits(v) { return String(v || '').replace(/[^0-9]/g, ''); }
+function sameParish(a, b) { a = String(a).replace(/\s/g, ''); b = String(b).replace(/\s/g, ''); return a === b || (digits(a) && digits(a) === digits(b)); }
+function phoneView(v) { const d = digits(v); const x = /^1\d{9}$/.test(d) ? '0' + d : d; return /^01\d{9}$/.test(x) ? x.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : String(v || ''); }
+
+function importRows() {
+  const I = S.imp, m = I.map, my = S.roster.parish, all = I.all && S.me.user.role === '관리자';
+  const rows = [], pastors = [];
+  let skipped = 0, otherParish = 0, noParish = 0;
+  I.table.slice(I.hi + 1).forEach(r => {
+    const g = k => m[k] != null ? String(r[m[k]] == null ? '' : r[m[k]]).trim() : '';
+    const name = g('name');
+    if (!name) return;
+    const org = parseOrg(g('org'));
+    const parish = (g('parish') ? parseOrg(g('parish')).parish || g('parish') : '') || org.parish || I.fileParish;
+    const sb = sbNorm(g('sarangbang')) || org.sarangbang;
+    const title = g('title'), role = roleOf(g('role'), title), phone = phoneView(g('phone'));
+    if (all) { if (!parish) { noParish++; return; } }
+    else if (parish && !sameParish(parish, my)) { otherParish++; return; }
+    const pa = all ? parish : my;
+    if (role === 'pastor') { pastors.push({ name, parish: pa, phone }); return; }
+    if (!sb) { skipped++; return; }
+    rows.push({ name, parish: pa, sarangbang: sb, title, phone, leader: role === 'leader' });
+  });
+  return { rows, pastors, skipped, otherParish, noParish };
+}
+
+function drawImport() {
+  const I = S.imp, head = I.hi >= 0 ? I.table[I.hi] : I.table[0].map((_, i) => String.fromCharCode(65 + i) + '열');
+  const admin = S.me.user.role === '관리자';
+  const opts = sel => `<option value="">(없음)</option>` + head.map((h, i) => `<option value="${i}" ${String(sel) === String(i) ? 'selected' : ''}>${esc(h || String.fromCharCode(65 + i) + '열')}</option>`).join('');
+  const { rows, pastors, skipped, otherParish, noParish } = importRows();
+  const parishes = [...new Set(rows.map(r => r.parish).concat(pastors.map(p => p.parish)))].sort(koSort);
+  const groups = {}; rows.forEach(r => { const k = (I.all && admin ? r.parish + ' ' : '') + r.sarangbang; groups[k] = (groups[k] || 0) + 1; });
+  const leaders = rows.filter(r => r.leader);
+  const hasSb = I.map.sarangbang != null || I.map.org != null;
+  const ok = I.map.name != null && hasSb && (rows.length || pastors.length);
+  const tag = r => r.leader ? '<span class="star">★</span> ' : '';
+  openLayer(`<div class="grab"></div><h2>📤 명단 미리 보기</h2><p class="muted" style="margin:0 0 12px">${esc(I.fname)} · ${I.all && admin ? '파일의 모든 교구에 반영' : esc(S.roster.parish) + '에 반영'}</p>
+    ${admin ? `<label class="radio" style="background:${I.all ? 'var(--pri-soft)' : '#fff'}"><input type="checkbox" ${I.all ? 'checked' : ''} onchange="S.imp.all=this.checked;drawImport()"><div><b>교회 전체 파일 — 모든 교구 한 번에 반영</b><small>소속 칸의 교구별로 나눠 넣고, 교구목사·사랑방장을 모두 배정합니다. 끄면 위에서 고른 ${esc(S.roster.parish)}만 반영</small></div></label>` : ''}
+    <div class="field"><span>칸 맞추기 — 자동으로 찾았어요. 다르면 바꿔 주세요</span>
+      ${COLS.map(c => `<div class="map"><b>${c.label}</b><select onchange="S.imp.map['${c.k}']=this.value===''?null:+this.value;drawImport()">${opts(I.map[c.k])}</select></div>`).join('')}
+      <small class="note">그룹직책이 <b>사랑방장</b>이면 ★ 사랑방장, 그룹직책 <b>목회자</b>·교회직분 <b>교구목사</b>(목사·전도사)면 그 교구 목회자로, 나머지는 사랑방원으로 들어갑니다.</small></div>
+    ${ok ? `<div class="stats four"><div class="stat"><b>${Object.keys(groups).length}</b><small>사랑방${I.all && admin ? ' · ' + parishes.length + '개 교구' : ''}</small></div><div class="stat"><b>${rows.length}</b><small>사랑방원</small></div>
+        <div class="stat"><b style="color:#d97706">${leaders.length}</b><small>★ 사랑방장</small></div><div class="stat"><b style="color:#7c3aed">${pastors.length}</b><small>✝ 교구목사</small></div></div>
+      ${pastors.length ? `<div class="field"><span>교구목사로 배정</span><div class="chips">${pastors.map(p => `<span class="chip" style="background:#f3edff;color:#7c3aed">✝ ${esc(p.name)} · ${esc(p.parish)}</span>`).join('')}</div></div>` : ''}
+      ${leaders.length ? `<div class="field"><span>사랑방장으로 지정</span><div class="chips">${leaders.map(l => `<span class="chip" style="background:var(--warn-soft);color:#b45309">★ ${esc(l.name)} · ${I.all && admin ? esc(l.parish) + ' ' : ''}${esc(l.sarangbang)}</span>`).join('')}</div></div>` : ''}
+      <div class="field"><span>사랑방별 인원</span><div class="chips">${Object.keys(groups).sort(koSort).map(k => `<span class="chip">${esc(k)} ${groups[k]}</span>`).join('')}</div></div>
+      ${skipped ? `<p class="muted">⚠️ 사랑방을 알 수 없는 ${skipped}명은 빠집니다. (소속 칸을 확인하거나, 반영 후 명단에서 추가)</p>` : ''}
+      ${otherParish ? `<p class="muted">다른 교구 ${otherParish}명은 제외했어요.</p>` : ''}
+      ${noParish ? `<p class="muted">⚠️ 교구를 알 수 없는 ${noParish}명은 빠집니다.</p>` : ''}
+      <table class="pv"><tr><th>이름</th>${I.all && admin ? '<th>교구</th>' : ''}<th>사랑방</th><th>직분</th><th>핸드폰</th></tr>
+        ${pastors.slice(0, 3).map(p => `<tr><td>✝ ${esc(p.name)}</td>${I.all && admin ? `<td>${esc(p.parish)}</td>` : ''}<td style="color:#7c3aed">교구목사</td><td></td><td>${esc(p.phone)}</td></tr>`).join('')}
+        ${rows.slice(0, 6).map(r => `<tr><td>${tag(r)}${esc(r.name)}</td>${I.all && admin ? `<td>${esc(r.parish)}</td>` : ''}<td>${esc(r.sarangbang)}</td><td>${esc(r.title)}</td><td>${esc(r.phone)}</td></tr>`).join('')}</table>
+      ${rows.length > 6 ? `<p class="muted" style="text-align:center">… 외 ${rows.length - 6}명</p>` : ''}
+      <div class="field" style="margin-top:12px"><span>반영 방법</span>
+        <label class="radio"><input type="radio" name="imode" ${I.mode === 'merge' ? 'checked' : ''} onchange="S.imp.mode='merge'"><div><b>추가·갱신</b><small>기존 명단은 두고, 새 사람은 추가 · 같은 이름은 사랑방·직분·연락처를 새로 맞춤</small></div></label>
+        <label class="radio"><input type="radio" name="imode" ${I.mode === 'replace' ? 'checked' : ''} onchange="S.imp.mode='replace'"><div><b>교구 명단 전체 바꾸기</b><small>새 학기 사랑방 재편성 때. 파일에 없는 사람은 명단에서 빠집니다 (지난 보고 기록은 그대로)</small></div></label></div>`
+      : `<div class="empty">${I.map.name != null && hasSb ? '칸은 잘 찾았는데, 이름이 적힌 줄이 아직 없어요.<br>교회 시스템에서 명단을 채워 내려받은 파일을 올려 주세요.' : (I.hi < 0 ? '제목 줄(이름·소속 등)을 찾지 못했어요. ' : '') + '‘이름’과 ‘소속’ 또는 ‘사랑방’ 칸을 골라 주세요.'}</div>`}
+    <div class="row" style="margin-top:6px"><button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" id="impBtn" ${ok ? '' : 'disabled'} onclick="doImport()">${rows.length + pastors.length}명 반영하기</button></div>`);
+}
+async function doImport() {
+  const I = S.imp, { rows, pastors } = importRows(), all = I.all && S.me.user.role === '관리자';
+  if (I.mode === 'replace' && !confirm(`${all ? '파일에 있는 모든 교구' : S.roster.parish} 명단을 이 파일 내용으로 모두 바꿀까요?`)) return;
+  const b = document.getElementById('impBtn'); b.disabled = true; b.textContent = '반영 중…';
+  try {
+    const r = await api('rosterImport', { parish: S.roster.parish, rows, pastors, mode: I.mode, all });
+    closeLayer();
+    if (all) S.me = await api('me');
+    S.roster = await api('roster', { parish: S.parish }); renderRoster();
+    toast(`반영 완료 — 추가 ${r.added} · 갱신 ${r.updated}${r.leaders ? ' · 사랑방장 ' + r.leaders : ''}${r.pastors ? ' · 교구목사 ' + r.pastors : ''}`);
+  } catch (e) { toast(e.message); b.disabled = false; b.textContent = '다시 시도'; }
+}
+function downloadTemplate() {
+  const csv = '﻿교구,사랑방,이름,직분,연락처,사랑방장\n' + `${S.roster.parish},1사랑방,홍길동,집사,010-0000-0000,O\n${S.roster.parish},1사랑방,김은혜,권사,010-0000-0000,\n${S.roster.parish},2사랑방,최믿음,권사,010-0000-0000,O\n`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = '잇다_명단양식.csv'; document.body.appendChild(a); a.click(); a.remove();
+  toast('양식을 내려받았어요. 엑셀로 열어 채운 뒤 올려 주세요.');
+}
+
+/* ════════════ 교역자 배정 (관리자) ════════════ */
+function renderStaff() {
+  const T = S.staff;
+  let inner = tabs();
+  if (!T) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
+  inner += `<div class="card"><h3>교구 목회자 배정 <button class="btn soft sm" onclick="editStaff(-1)">＋ 추가</button></h3>
+    <p class="muted" style="margin:0 0 6px">목회자를 교구에 배정하면, 그 목회자가 자기 교구 명단을 올리고 사랑방장을 지정합니다.</p>
+    ${T.list.slice().sort((a, b) => koSort(a.parish, b.parish)).map(p => { const i = T.list.indexOf(p); return `<div class="mrow" onclick="editStaff(${i})"><div class="nm"><b>${esc(p.name)}</b><small>${esc(p.role)}</small><br><span class="tag p">${esc(p.parish)}</span> ${p.lastSeen ? '<span class="tag ok">접속함</span>' : '<span class="tag wait">아직 안 들어옴</span>'}</div>
+      <button class="btn soft sm" onclick="event.stopPropagation();shareText(inviteText(S.staff.list[${i}],true))">링크 공유</button></div>`; }).join('')}</div>`;
+  $app.innerHTML = shell(inner);
+}
+function editStaff(i) {
+  const p = i >= 0 ? S.staff.list[i] : { name: '', parish: '', phone: '', role: '목회자' };
+  openLayer(`<div class="grab"></div><h2>${i >= 0 ? '교역자 정보' : '교역자 추가'}</h2>
+    <label class="field" style="margin-top:12px"><span>이름</span><input class="input" id="sName" value="${esc(p.name)}"></label>
+    <label class="field"><span>담당 교구</span><input class="input" id="sParish" value="${esc(p.parish)}" placeholder="예) 5교구" list="plist"><datalist id="plist">${(S.staff.parishes || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+    <label class="field"><span>연락처</span><input class="input" id="sPhone" inputmode="tel" value="${esc(p.phone)}"></label>
+    <label class="field"><span>역할</span><select id="sRole"><option ${p.role === '목회자' ? 'selected' : ''}>목회자</option><option ${p.role === '관리자' ? 'selected' : ''}>관리자</option></select></label>
+    <div class="row">${i >= 0 ? `<button class="btn ghost" style="color:var(--red)" onclick="saveStaff(${i},true)">삭제</button>` : ''}<button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" onclick="saveStaff(${i})">저장</button></div>`);
+}
+async function saveStaff(i, remove) {
+  const old = i >= 0 ? S.staff.list[i] : null;
+  if (remove && !confirm(`${old.name} 님을 교역자 명단에서 지울까요?`)) return;
+  try {
+    await api('staffSave', { person: { oldName: old ? old.name : '', name: val('sName'), parish: val('sParish'), phone: val('sPhone'), role: val('sRole') }, remove: !!remove });
+    closeLayer(); S.staff = await api('staff'); S.me = await api('me'); renderStaff(); toast('저장했어요.');
+  } catch (e) { toast(e.message); }
+}
+
+/* ───────── 부탁 종류 · 기본 문자 문안 ───────── */
+const REQS = [{ k: '심방전화', ico: '📞' }, { k: '기도부탁', ico: '🙏' }, { k: '심방부탁', ico: '🏠' }];
+function reqTag(p) { if (!p.req) return ''; const m = REQS.find(r => r.k === p.req) || { ico: '' }; return `<span class="tag v">${m.ico} ${esc(p.req)}</span>`; }
+function normP(p) { p = Object.assign({}, p); if (!p.id) p.id = Math.random().toString(36).slice(2, 8); if (p.visit && !p.req) p.req = '심방부탁'; delete p.visit; p.req = p.req || ''; return p; }
+
+/* 기본 문안 — [문자자료] 시트(쉐퍼드 데스크 자료)가 있으면 그 문안이 먼저 나옵니다. {이름} 자리에 받는 분 이름이 들어갑니다. */
+const SMS_LIB = [
+  { situation: '위로', keys: /소천|장례|별세|돌아가|상을 당|부고|천국/, title: '사랑하는 가족을 떠나보낸 성도님께',
+    body: '갑작스러운 이별 소식에 무슨 말씀을 드려야 할지 조심스럽습니다. 슬픔 가운데 계신 가족들 곁에 부활의 소망이신 주님께서 함께하시며 위로해 주시기를 간절히 기도합니다.',
+    verse: '예수께서 이르시되 나는 부활이요 생명이니 나를 믿는 자는 죽어도 살겠고 (요 11:25)',
+    illus: '📝 겨울나무는 죽은 것처럼 보이지만 뿌리는 봄을 기다리고 있습니다. 믿음 안에서의 이별은 끝이 아니라, 다시 만날 봄을 기다리는 시간입니다.' },
+  { situation: '수술', keys: /수술(?! ?후)|시술/, title: '수술을 앞둔 성도님께',
+    body: '수술을 앞두고 계시다는 소식 들었습니다. 수술실 안에도 주님께서 함께 계셔서 의료진의 손을 붙드시고, 깨어나는 순간까지 평안으로 지켜 주시기를 기도합니다.',
+    verse: '여호와는 너를 지키시는 이시라 여호와께서 네 오른쪽에서 네 그늘이 되시나니 (시 121:5)',
+    illus: '📝 아이는 무서운 주사 앞에서도 엄마 손을 꼭 잡으면 울음을 그칩니다. 상황이 바뀌어서가 아니라 잡은 손이 있기 때문입니다. 주님의 손을 꼭 잡고 들어가세요.' },
+  { situation: '출산', keys: /출산|임신|태중|아기|순산|산모/, title: '출산·태중 아기를 위한 축복',
+    body: '귀한 생명을 선물로 주신 소식에 교구가 함께 기뻐합니다. 산모의 몸이 속히 회복되고, 아기가 주님의 사랑 안에서 건강하게 자라기를 기도합니다.',
+    verse: '보라 자식들은 여호와의 기업이요 태의 열매는 그의 상급이로다 (시 127:3)',
+    illus: '📝 한나는 기다림 끝에 얻은 아들을 “여호와께 구하였다” 하여 사무엘이라 불렀습니다. 이 아기의 이름도 평생 기도의 응답으로 불리기를 바랍니다.' },
+  { situation: '환우', keys: /입원|병원|투병|아프|치료|항암|통증|회복|건강|병/, title: '아픈 가운데 있는 성도님께',
+    body: '편찮으시다는 소식을 듣고 마음이 쓰였습니다. 치료 과정마다 주님께서 의료진에게 지혜를 주시고, 몸과 마음에 평안을 주시도록 교구가 함께 기도하고 있습니다.',
+    verse: '두려워하지 말라 내가 너와 함께 함이라 놀라지 말라 나는 네 하나님이 됨이라 내가 너를 굳세게 하리라 참으로 너를 도와 주리라 (사 41:10)',
+    illus: '📝 등대는 배를 대신 저어 주지 않지만, 캄캄한 밤 내내 갈 길을 비춰 줍니다. 회복이 더디게 느껴질 때에도 주님은 한순간도 불을 끄지 않으십니다.' },
+  { situation: '이사', keys: /이사|입주|새 집|새집/, title: '새 보금자리로 이사하신 가정께',
+    body: '새 보금자리로 옮기셨다는 소식 반가웠습니다. 짐 정리로 분주하시겠지만, 새 집을 드나드는 모든 걸음을 주님께서 지켜 주시고 기도와 웃음이 끊이지 않는 집 되기를 축복합니다.',
+    verse: '여호와께서 너의 출입을 지금부터 영원까지 지키시리로다 (시 121:8)',
+    illus: '📝 집을 지을 때 가장 먼저 놓는 것은 벽돌이 아니라 주춧돌입니다. 새 집에서 드리는 첫 기도가 이 가정의 주춧돌이 되기를 바랍니다.' },
+  { situation: '개업', keys: /개업|창업|오픈|가게|사업|매장/, title: '개업·새 일터를 축복하며',
+    body: '개업을 진심으로 축하드립니다. 문을 여는 첫날부터 주님께서 일터의 주인이 되어 주시고, 찾아오는 손님마다 따뜻함을 안고 돌아가는 복된 자리가 되기를 기도합니다.',
+    verse: '우리 하나님 여호와의 은총을 우리에게 내리게 하사 우리의 손이 행한 일을 우리에게 견고하게 하소서 (시 90:17)',
+    illus: '📝 씨앗을 심은 농부는 매일 땅을 파 보지 않습니다. 심고, 물 주고, 기다립니다. 정직하게 심은 수고는 주님의 때에 반드시 열매로 돌아옵니다.' },
+  { situation: '시험·진로', keys: /수능|시험|입시|취업|면접|진로|합격|이직/, title: '시험·진로를 앞둔 분께',
+    body: '중요한 시험(진로)을 앞두고 계시다는 이야기 들었습니다. 준비한 만큼 담대하게 임하고, 결과를 넘어 주님께서 가장 좋은 길로 인도해 주시기를 기도합니다.',
+    verse: '사람이 마음으로 자기의 길을 계획할지라도 그의 걸음을 인도하시는 이는 여호와시니라 (잠 16:9)',
+    illus: '📝 내비게이션은 길을 잘못 들어도 “경로를 재탐색합니다” 하고 새 길을 보여 줍니다. 인생의 길이 주님 손에 있으면 어떤 갈림길에서도 길을 잃지 않습니다.' },
+  { situation: '새가족', keys: /새가족|등록|처음 오|처음 나오/, title: '새가족 환영 인사',
+    body: '우리 교회와 사랑방에 함께하게 되어 정말 반갑습니다. 낯선 자리가 하루하루 편안한 집처럼 느껴지도록 교구가 곁에서 돕겠습니다. 궁금한 것은 언제든 편하게 연락 주세요.',
+    verse: '보라 형제가 연합하여 동거함이 어찌 그리 선하고 아름다운고 (시 133:1)',
+    illus: '📝 화로에서 떨어져 나온 숯은 금세 식지만, 함께 모인 숯은 오래 탑니다. 사랑방이 {이름}님의 믿음을 따뜻하게 지켜 주는 화로가 되기를 바랍니다.' },
+  { situation: '생일', keys: /생일|생신/, title: '생일 축하',
+    body: '생일을 진심으로 축하드립니다! 지난 한 해 지켜 주신 주님께 감사드리며, 새로운 한 해도 날마다 주님의 은혜를 누리시기를 축복합니다.',
+    verse: '여호와는 네게 복을 주시고 너를 지키시기를 원하며 여호와는 그의 얼굴을 네게 비추사 은혜 베푸시기를 원하며 (민 6:24-25)', illus: '' },
+  { situation: '안부', keys: /결석|안부|못 나오|못나오|연락이 안|낙심|지쳐|힘들어/, title: '오랜만에 드리는 안부',
+    body: '요즘 얼굴을 뵙지 못해 안부가 궁금했습니다. 혹시 어려운 일은 없으신지요? 지치는 날에도 주님께서 새 힘 주시기를 기도하며, 다음 주일에 반갑게 뵙기를 기다리겠습니다.',
+    verse: '오직 여호와를 앙망하는 자는 새 힘을 얻으리니 독수리가 날개치며 올라감 같을 것이요 (사 40:31)',
+    illus: '📝 독수리는 폭풍을 피하지 않고 그 바람을 타고 더 높이 오른다고 합니다. 지금 부는 바람이 {이름}님을 더 높이 올리는 바람이 되기를 바랍니다.' },
+  { situation: '기도', keys: null, title: '기도제목을 받고',
+    body: '나눠 주신 기도제목 잘 받았습니다. 교구가 마음을 모아 함께 기도하고 있습니다. 염려는 주님께 맡기시고 평안을 누리시길 바랍니다.',
+    verse: '아무 것도 염려하지 말고 다만 모든 일에 기도와 간구로, 너희 구할 것을 감사함으로 하나님께 아뢰라 (빌 4:6)',
+    illus: '📝 무거운 짐을 진 채 버스에 탄 사람이 짐을 내려놓지 않으면 몸만 고단합니다. 버스는 이미 짐까지 싣고 가는데도 말입니다. 기도는 그 짐을 주님께 내려놓는 일입니다.' }
+];
+
+/* ───────── 도우미 ───────── */
+let onLayerClose = null;
+function openLayer(html, onClose) { onLayerClose = onClose || null; $layer.innerHTML = `<div class="dim" onclick="if(event.target===this)closeLayer()"><div class="sheet">${html}</div></div>`; }
+function closeLayer() { $layer.innerHTML = ''; const f = onLayerClose; onLayerClose = null; if (f) f(); }
+let tt; function toast(m) { clearTimeout(tt); let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); } el.textContent = m; tt = setTimeout(() => el.remove(), 2800); }
+function confirmSoft(m) { return window.confirm(m); }
+function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmt(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function lastSunday() { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return fmt(d); }
+function weeksAgo(ds) { const n = Math.round((new Date(lastSunday()) - new Date(ds)) / 6048e5); return n > 0 ? n + '주 전' : ''; }
+function draftKey() { return `draft:${S.form ? S.form.sarangbang : S.target.sarangbang}:${S.date}`; }
+function saveDraft() { LS.set(draftKey(), JSON.stringify(S.form.data)); }
+function safeJSON(s) { try { return s ? JSON.parse(s) : null } catch (e) { return null } }
+function logoSvg(n) { return `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M12 17.5s-3.2-1.9-3.2-4a1.8 1.8 0 0 1 3.2-1.1 1.8 1.8 0 0 1 3.2 1.1c0 2.1-3.2 4-3.2 4z" fill="#fff" stroke="none"/></svg>`; }
+
+/* ───────── 체험(데모) 모드 — API_URL이 비어 있을 때만 사용 ───────── */
+const Demo = (() => {
+  const users = [
+    { name: '홍길동', role: '사랑방장', parish: '5교구', sarangbang: '1사랑방', code: '1111', token: 'demo-leader', phone: '010-1234-5678', lastSeen: '2026-11-08 13:10' },
+    { name: '최믿음', role: '사랑방장', parish: '5교구', sarangbang: '2사랑방', code: '2222', token: 'demo-leader2', phone: '010-2345-6789', lastSeen: '' },
+    { name: '이세진', role: '목회자', parish: '5교구', sarangbang: '', code: '0000', token: 'demo-pastor', phone: '' },
+    { name: '관리자', role: '관리자', parish: '5교구', sarangbang: '', code: '9999', token: 'demo-admin', phone: '' }
+  ];
+  let seq = 0; const nid = () => 'dm' + (++seq) + Math.random().toString(36).slice(2, 5);
+  let members = [
+    ['1사랑방', '홍길동', '집사', '010-1234-5678'], ['1사랑방', '김은혜', '권사', '010-1111-2222'], ['1사랑방', '박소망', '성도', ''], ['1사랑방', '정사랑', '집사', '010-3333-4444'], ['1사랑방', '윤기쁨', '성도', ''],
+    ['2사랑방', '최믿음', '권사', '010-2345-6789'], ['2사랑방', '한평안', '집사', ''], ['2사랑방', '오온유', '성도', ''], ['2사랑방', '서충성', '집사', ''],
+    ['3사랑방', '강온화', '권사', ''], ['3사랑방', '임절제', '성도', ''], ['3사랑방', '조양선', '집사', '']
+  ].map(m => ({ id: nid(), parish: '5교구', sarangbang: m[0], name: m[1], title: m[2], phone: m[3] }));
+  const of = sb => members.filter(m => m.sarangbang === sb);
+  const sbsOf = () => [...new Set(members.map(m => m.sarangbang).concat(users.filter(u => u.sarangbang).map(u => u.sarangbang)))].sort(koSort);
+  const KEY = 'demo-reports-v3', RKEY = 'demo-resp-v3';
+  const store = () => safeJSON(LS.get(KEY)) || {};
+  const put = o => LS.set(KEY, JSON.stringify(o));
+  const rstore = () => safeJSON(LS.get(RKEY)) || {};
+  const rput = o => LS.set(RKEY, JSON.stringify(o));
+  if (!LS.get(KEY)) {
+    const o = {}, base = new Date(lastSunday() + 'T00:00:00');
+    for (let w = 0; w <= 7; w++) {
+      const d = new Date(base); d.setDate(d.getDate() - 7 * w); const ds = fmt(d);
+      ['1사랑방', '2사랑방', '3사랑방'].forEach(sb => {
+        if (w === 0 && sb !== '2사랑방') return;
+        const ms = of(sb).map(m => m.name);
+        const k = Math.max(1, ms.length - ((w + sb.length) % 3));
+        o[ds + '|' + sb] = { date: ds, parish: '5교구', sarangbang: sb, worship: ms.slice(0, k), group: ms.slice(0, Math.max(1, k - 1)), newcomers: [],
+          prayers: w === 0 ? [{ id: 'd1', who: '한평안', text: '다음 주 화요일 무릎 수술을 받습니다. 수술이 잘 되도록 기도 부탁드립니다.', req: '심방부탁' }, { id: 'd2', who: '사랑방 공동', text: '연말까지 사랑방 모임이 더 따뜻해지도록', req: '' }] : [],
+          note: w === 0 ? '오온유 성도 2주째 결석 — 직장 일로 지쳐 있다고 함' : '', writer: '예시', at: ds + ' 14:00' };
+      });
+    }
+    put(o);
+  }
+  const who = t => { const u = users.find(x => x.token === t); if (!u) throw new Error('로그인이 필요합니다.'); return u; };
+  const delay = v => new Promise(r => setTimeout(() => r(JSON.parse(JSON.stringify(v == null ? null : v))), 200));
+  const stamp = () => fmt(new Date()) + ' ' + new Date().toTimeString().slice(0, 5);
+  const respOf = k => { const r = rstore()[k]; return r ? { comment: r.comment || '', by: r.by || '', at: r.at || '', acks: r.acks || {} } : null; };
+  const syncLeader = (name, info) => {
+    const i = users.findIndex(x => x.role === '사랑방장' && x.name === name);
+    if (!info) { if (i >= 0) users.splice(i, 1); return; }
+    if (i >= 0) Object.assign(users[i], info); else users.push(Object.assign({ role: '사랑방장', parish: '5교구', code: String(1000 + Math.floor(Math.random() * 9000)), token: 'demo-' + nid(), lastSeen: '' }, info));
+  };
+  const pnorm = v => { const d = String(v || '').replace(/[^0-9]/g, ''); return /^01\d{9}$/.test(d) ? d.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : /^1\d{9}$/.test(d) ? ('0' + d).replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : String(v || ''); };
+  return {
+    async call(b) {
+      if (b.action === 'login') { const u = users.find(x => x.name === b.name && x.code === b.code); if (!u) throw new Error('이름 또는 접속코드가 맞지 않습니다.'); return delay({ token: u.token }); }
+      const u = who(b.token);
+      if (b.action === 'me') { u.lastSeen = stamp(); return delay({ user: { name: u.name, role: u.role, parish: u.parish, sarangbang: u.sarangbang }, church: '할렐루야교회', sarangbangs: sbsOf(), parishes: ['5교구'] }); }
+      if (b.action === 'sms') return delay({ list: [{ situation: '환우', title: '(예시) 문자자료 시트에서 온 문안', body: '쉐퍼드 데스크에서 쓰시던 문자를 [문자자료] 시트에 붙여 넣으면 이렇게 맨 위에 나옵니다. {이름}님의 회복을 위해 기도합니다.', verse: '', illus: '📝 문자예화 칸에 넣은 예화는 ‘문자예화 첨부’를 켜면 함께 붙습니다.' }] });
+      if (b.action === 'form') {
+        const sb = u.role === '사랑방장' ? u.sarangbang : b.sarangbang, k = b.date + '|' + sb, r = store()[k];
+        return delay({ parish: '5교구', sarangbang: sb, date: b.date, members: of(sb).map(m => ({ name: m.name, title: m.title })),
+          report: r ? { worship: r.worship, group: r.group, newcomers: r.newcomers, prayers: r.prayers, note: r.note, addNewToMembers: true } : null, updatedAt: r ? r.at : '', resp: r ? respOf(k) : null });
+      }
+      if (b.action === 'save') {
+        const r = b.report, sb = u.role === '사랑방장' ? u.sarangbang : r.sarangbang, o = store(), k = r.date + '|' + sb, old = !!o[k];
+        o[k] = Object.assign({}, r, { sarangbang: sb, writer: u.name, at: stamp() });
+        if (r.addNewToMembers) r.newcomers.forEach(n => { if (!of(sb).some(m => m.name === n)) members.push({ id: nid(), parish: '5교구', sarangbang: sb, name: n, title: '새가족', phone: '' }); });
+        put(o); return delay({ updated: old });
+      }
+      if (u.role === '사랑방장') throw new Error('목회자만 할 수 있습니다.');
+      if (b.action === 'roster') return delay({ parish: '5교구', members, leaders: users.filter(x => x.role === '사랑방장').map(x => ({ name: x.name, sarangbang: x.sarangbang, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen })), parishes: ['5교구'] });
+      if (b.action === 'memberSave') {
+        const m = b.member, cur = members.find(x => x.id === m.id);
+        if (b.remove) { if (cur) { members = members.filter(x => x !== cur); syncLeader(cur.name, null); } return delay({ ok: true }); }
+        const obj = { name: m.name, title: m.title, phone: pnorm(m.phone), sarangbang: m.sarangbang };
+        const oldName = cur ? cur.name : m.name;
+        if (cur) Object.assign(cur, obj); else members.push(Object.assign({ id: nid(), parish: '5교구' }, obj));
+        syncLeader(oldName, m.leader ? { name: m.name, sarangbang: m.sarangbang, phone: obj.phone } : null);
+        return delay({ ok: true });
+      }
+      if (b.action === 'rosterImport') {
+        let added = 0, updated = 0;
+        if (b.mode === 'replace') members = [];
+        b.rows.forEach(r => { const hit = members.find(x => x.name === r.name); if (hit) { Object.assign(hit, { sarangbang: r.sarangbang, title: r.title || hit.title, phone: pnorm(r.phone) || hit.phone }); updated++; } else { members.push({ id: nid(), parish: '5교구', sarangbang: r.sarangbang, name: r.name, title: r.title, phone: pnorm(r.phone) }); added++; } });
+        const fl = b.rows.filter(r => r.leader);
+        if (fl.length) { if (b.mode === 'replace') users.filter(x => x.role === '사랑방장' && !fl.some(f => f.name === x.name)).forEach(x => syncLeader(x.name, null)); fl.forEach(f => syncLeader(f.name, { name: f.name, sarangbang: f.sarangbang, phone: pnorm(f.phone) })); }
+        let pc = 0;
+        (b.pastors || []).forEach(p => { pc++; const x = users.find(y => y.name === p.name && y.role !== '사랑방장'); if (x) { if (x.role !== '관리자') Object.assign(x, { parish: p.parish, phone: pnorm(p.phone) || x.phone }); } else users.push({ name: p.name, role: '목회자', parish: p.parish, sarangbang: '', phone: pnorm(p.phone), code: '3333', token: 'demo-' + nid(), lastSeen: '' }); });
+        return delay({ added, updated, leaders: fl.length, pastors: pc });
+      }
+      if (b.action === 'resetLink') { const x = users.find(y => y.name === b.name); if (x) x.token = 'demo-' + nid(); return delay({ token: x && x.token }); }
+      if (b.action === 'staff' || b.action === 'staffSave') {
+        if (u.role !== '관리자') throw new Error('관리자만 할 수 있습니다.');
+        if (b.action === 'staffSave') {
+          const p = b.person, i = users.findIndex(x => x.name === (p.oldName || p.name) && x.role !== '사랑방장');
+          if (b.remove) { if (i >= 0 && users[i] !== u) users.splice(i, 1); }
+          else if (i >= 0) Object.assign(users[i], { name: p.name, parish: p.parish, phone: pnorm(p.phone), role: p.role });
+          else users.push({ name: p.name, parish: p.parish, phone: pnorm(p.phone), role: p.role || '목회자', sarangbang: '', code: '3333', token: 'demo-' + nid(), lastSeen: '' });
+          return delay({ ok: true });
+        }
+        return delay({ list: users.filter(x => x.role !== '사랑방장').map(x => ({ name: x.name, role: x.role, parish: x.parish, phone: x.phone, code: x.code, token: x.token, lastSeen: x.lastSeen || '' })), parishes: ['5교구'] });
+      }
+      if (b.action === 'comment' || b.action === 'ack') {
+        const k = b.date + '|' + b.sarangbang; if (!store()[k]) throw new Error('아직 제출된 보고가 없습니다.');
+        const R = rstore(); const r = R[k] || { acks: {} };
+        if (b.action === 'comment') { r.comment = String(b.text || '').trim(); r.by = u.name; r.at = stamp(); }
+        else { if (b.done === false) delete r.acks[b.prayerId]; else r.acks[b.prayerId] = { by: u.name, at: stamp() }; }
+        R[k] = r; rput(R); return delay(respOf(k));
+      }
+      if (b.action === 'dashboard') {
+        const o = store();
+        const list = sbsOf().map(sb => {
+          const k = b.date + '|' + sb, r = o[k], ms = of(sb);
+          return { sarangbang: sb, leaders: users.filter(x => x.role === '사랑방장' && x.sarangbang === sb).map(l => ({ name: l.name, phone: l.phone || '' })),
+            people: ms.map(m => ({ name: m.name, title: m.title, phone: m.phone })), enrolled: ms.length, submitted: !!r,
+            writer: r ? r.writer : '', updatedAt: r ? r.at : '', report: r ? Object.assign({}, r, { prayers: (r.prayers || []).map(normP) }) : null,
+            absent: r ? ms.map(m => m.name).filter(n => !r.worship.includes(n)).join(', ') : '', resp: r ? respOf(k) : null };
+        });
+        const trend = [], d0 = new Date(b.date + 'T00:00:00');
+        for (let i = 7; i >= 0; i--) { const d = new Date(d0); d.setDate(d.getDate() - 7 * i); const ds = fmt(d); const rs = Object.values(o).filter(r => r.date === ds); trend.push({ date: ds, worship: rs.reduce((a, r) => a + r.worship.length, 0), group: rs.reduce((a, r) => a + r.group.length, 0), count: rs.length }); }
+        return delay({ parish: '5교구', date: b.date, list, trend, pastor: u.name });
+      }
+      throw new Error('알 수 없는 요청');
+    }
+  };
+})();
+
+boot();
+</script>
+</body>
+</html>
