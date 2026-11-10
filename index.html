@@ -300,7 +300,7 @@ async function loadMe() {
   history.replaceState(null, '', location.pathname + '?t=' + encodeURIComponent(S.token));
   const role = S.me.user.role;
   S.tab = role === '사랑방장' ? 'report' : 'dash';
-  if (role === '관리자') S.parish = (S.me.parishes || [])[0] || '';
+  if (role === '관리자') S.parish = isChurchAdmin() ? ((S.me.parishes || [])[0] || '') : S.me.user.parish;
   if (role === '사랑방장') S.target = { parish: S.me.user.parish, sarangbang: S.me.user.sarangbang };
   await refresh();
   maybeAutoGuide();
@@ -388,7 +388,7 @@ function renderReport() {
   if (u.role !== '사랑방장') {
     inner = tabs() + inner;
     inner += `<div class="card"><label class="field" style="margin:0"><span>대신 작성할 사랑방</span><select onchange="pickTarget(this.value)">
-      <option value="">선택하세요</option>${pastorSbList().map(sb => `<option ${S.target && S.target.sarangbang === sb ? 'selected' : ''}>${esc(sb)}</option>`).join('')}</select></label></div>`;
+      <option value="">선택하세요</option>${sbOptions(S.target && S.target.sarangbang)}</select></label></div>`;
   }
   if (!S.form) { $app.innerHTML = shell(inner + (u.role !== '사랑방장' ? '' : '<div class="empty">정보를 불러오지 못했어요.</div>')); return; }
   const f = S.form, d = f.data;
@@ -498,12 +498,15 @@ async function submitReport() {
   } catch (e) { toast(e.message + ' (작성 내용은 이 휴대폰에 보관돼 있어요)'); b.disabled = false; b.textContent = '다시 시도'; }
 }
 
+/* 교회 전체 관리자 = 관리자 + 교구 칸 비움. 교구가 적힌 관리자는 그 교구만 */
+function isChurchAdmin() { return !!(S.me && S.me.user.role === '관리자' && (S.me.churchAdmin || !S.me.user.parish)); }
+
 /* 목회자 화면 */
 function tabs() {
   const admin = S.me.user.role === '관리자';
   const t = [['dash', '교구 현황'], ['report', '보고 작성'], ['roster', '명단 관리']].concat(admin ? [['staff', '교역자']] : []);
   let h = `<div class="seg">${t.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" onclick="go('${k}')">${l}</button>`).join('')}</div>`;
-  if (admin && S.tab !== 'staff') h += `<div class="card" style="padding:12px 14px"><select onchange="S.parish=this.value;S.target=null;refresh()">${(S.me.parishes || []).map(p => `<option ${p === S.parish ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
+ if (isChurchAdmin() && S.tab !== 'staff') h += `<div class="card" style="padding:12px 14px"><select onchange="S.parish=this.value;S.target=null;refresh()">${(S.me.parishes || []).map(p => `<option ${p === S.parish ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
   return h;
 }
 function pastorSbList() { return S.dash ? S.dash.list.map(x => x.sarangbang) : S.roster ? [...new Set(S.roster.members.map(m => m.sarangbang))].sort(koSort) : (S.me.sarangbangs || []); }
@@ -513,31 +516,40 @@ function renderDash() {
   let inner = tabs();
   inner += dateBar() + installBar();
   if (!D) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
-  const sub = D.list.filter(x => x.submitted);
+  const areaList = areasOf(D.list.map(x => ({ sarangbang: x.sarangbang, area: x.area })));
+  if (S.area && !areaList.includes(S.area)) S.area = '';
+  const inA = x => !S.area || areaOf(x.sarangbang, x.area) === S.area;
+  const L = D.list.filter(inA);
+  const sub = L.filter(x => x.submitted), todo = L.filter(x => !x.submitted);
   const tw = sub.reduce((a, x) => a + x.report.worship.length, 0);
   const tg = sub.reduce((a, x) => a + x.report.group.length, 0);
   const tn = sub.reduce((a, x) => a + x.report.newcomers.length, 0);
   const enr = sub.reduce((a, x) => a + x.enrolled, 0);
+  if (areaList.length > 1) inner += areaBar(areaList, D.list.map(x => areaOf(x.sarangbang, x.area)), x => D.list.filter(y => areaOf(y.sarangbang, y.area) === x && y.submitted).length);
   inner += `<div class="stats four">
-    <div class="stat"><b>${sub.length}<small style="font-size:13px;color:var(--sub)">/${D.list.length}</small></b><small>보고 제출</small></div>
+    <div class="stat"><b>${sub.length}<small style="font-size:13px;color:var(--sub)">/${L.length}</small></b><small>보고 제출${S.area ? ' · ' + esc(S.area) : ''}</small></div>
     <div class="stat"><b>${tw}<small style="font-size:13px;color:var(--sub)">${enr ? ' · ' + Math.round(tw / enr * 100) + '%' : ''}</small></b><small>주일예배 출석</small></div>
     <div class="stat"><b style="color:var(--ok)">${tg}</b><small>사랑방 모임</small></div>
     <div class="stat"><b style="color:#7c3aed">${tn}</b><small>새가족·방문</small></div></div>`;
 
-  // 사랑방 목록
-  inner += `<div class="card"><h3>사랑방별 현황 <span class="row">
-      ${D.list.some(x => !x.submitted) ? `<button class="btn soft sm" onclick="copyNudge()">미제출 안내 복사</button>` : ''}</span></h3>
-    ${D.list.length ? D.list.map((x, i) => {
-      const asks = x.submitted ? x.report.prayers.filter(p => p.req) : [];
-      const pend = asks.filter(p => !(x.resp && x.resp.acks && x.resp.acks[p.id])).length;
-      return `<div class="sb" onclick="openSb(${i})"><div class="nm"><b>${esc(x.sarangbang)}</b><small>${esc(x.leaders.map(l => l.name).join(', ') || '사랑방장 미지정')} · 재적 ${x.enrolled}</small></div>
-      ${x.submitted ? `<div class="num"><b>${x.report.worship.length}</b> 예배 · <b>${x.report.group.length}</b> 모임<br>${pend ? `<span class="tag v">부탁 ${pend}</span> ` : ''}${x.resp && x.resp.comment ? '<span class="tag p">💬</span> ' : ''}<span class="tag ok">제출</span></div>` : '<span class="tag no">미제출</span>'}</div>`;
-    }).join('') : '<div class="empty">사용자·성도명단 시트에 사랑방을 등록해 주세요.</div>'}
+  // 사랑방 목록 — 제출 / 미제출
+  const show = S.dashSeg === 'todo' ? todo : sub;
+  const sbRow = x => {
+    const i = D.list.indexOf(x);
+    const asks = x.submitted ? x.report.prayers.filter(p => p.req) : [];
+    const pend = asks.filter(p => !(x.resp && x.resp.acks && x.resp.acks[p.id])).length;
+    return `<div class="sb" onclick="openSb(${i})"><div class="nm"><b>${esc(x.sarangbang)}</b><small>${esc(x.leaders.map(l => l.name).join(', ') || '사랑방장 미지정')} · 재적 ${x.enrolled}</small></div>
+      ${x.submitted ? `<div class="num"><b>${x.report.worship.length}</b> 예배 · <b>${x.report.group.length}</b> 모임<br>${pend ? `<span class="tag v">부탁 ${pend}</span> ` : ''}${x.resp && x.resp.comment ? '<span class="tag p">💬</span> ' : ''}<span class="tag ok">${esc(String(x.updatedAt).slice(11, 16))}</span></div>`
+        : `<div class="num">${x.leaders[0] && x.leaders[0].phone ? `<a class="btn ghost sm" href="tel:${esc(x.leaders[0].phone)}" onclick="event.stopPropagation()">📞</a>` : ''}</div>`}</div>`;
+  };
+  inner += `<div class="card"><div class="seg" style="margin-bottom:6px"><button class="${S.dashSeg !== 'todo' ? 'on' : ''}" onclick="S.dashSeg='done';renderDash()">✓ 제출 ${sub.length}</button><button class="${S.dashSeg === 'todo' ? 'on' : ''}" onclick="S.dashSeg='todo';renderDash()">미제출 ${todo.length}</button></div>
+    ${S.dashSeg === 'todo' && todo.length ? `<button class="btn soft sm block" style="margin:6px 0" onclick="copyNudge()">📋 미제출 사랑방장 안내 문구 복사</button>` : ''}
+    ${show.length ? show.map(sbRow).join('') : `<div class="empty">${S.dashSeg === 'todo' ? '모든 사랑방이 보고를 냈어요 🙏' : '아직 제출한 사랑방이 없어요.'}</div>`}
   </div>`;
 
   // 사랑방에서 온 부탁 (심방전화·기도부탁·심방부탁)
   const asks = [];
-  D.list.forEach((x, xi) => x.submitted && x.report.prayers.forEach(p => { if (p.req) asks.push({ xi, p, done: !!(x.resp && x.resp.acks && x.resp.acks[p.id]) }); }));
+  D.list.forEach((x, xi) => inA(x) && x.submitted && x.report.prayers.forEach(p => { if (p.req) asks.push({ xi, p, done: !!(x.resp && x.resp.acks && x.resp.acks[p.id]) }); }));
   asks.sort((a, b) => a.done - b.done);
   const notes = sub.filter(x => x.report.note);
   if (asks.length || notes.length) {
@@ -550,7 +562,7 @@ function renderDash() {
   // 기도제목
   const prs = [];
   sub.forEach(x => x.report.prayers.forEach(p => { if (!p.req) prs.push({ sb: x.sarangbang, ...p }); }));
-  inner += `<div class="card"><h3>교구 기도제목 <span class="hint">${prs.length}건</span></h3>
+  inner += `<div class="card"><h3>${S.area ? esc(S.area) + ' ' : '교구 '}기도제목 <span class="hint">${prs.length}건</span></h3>
     ${prs.length ? prs.map(p => `<div class="prayer"><div class="who"><span>${esc(p.who)}</span><span class="tag p">${esc(p.sb)}</span></div><div class="txt">${esc(p.text)}</div></div>`).join('') : '<div class="empty">부탁 외의 기도제목이 아직 없어요.</div>'}</div>`;
 
   // 추이
@@ -715,7 +727,7 @@ function nudgeText() {
 }
 function copySummary() { copy(summaryText(), '교구 주일 보고가 복사되었습니다. 카톡에 붙여 넣으세요.'); }
 function copyNudge() {
-  const miss = S.dash.list.filter(x => !x.submitted);
+  const miss = S.dash.list.filter(x => !x.submitted && (!S.area || areaOf(x.sarangbang, x.area) === S.area));
   copy(`[미제출: ${miss.map(x => x.sarangbang + (x.leaders[0] ? '(' + x.leaders[0].name + ')' : '')).join(', ')}]\n\n` + nudgeText(), '안내 문구가 복사되었습니다.');
 }
 async function copy(t, msg) {
@@ -739,35 +751,84 @@ function koSort(a, b) { return String(a).localeCompare(String(b), 'ko', { numeri
 function isLeader(m) { return S.roster.leaders.some(l => l.name === m.name && l.sarangbang === m.sarangbang); }
 function linkOf(token) { return location.origin + location.pathname + '?t=' + encodeURIComponent(token); }
 
+/* ── 마을(구역) 묶음: 소속 '5교구 / 이매 / 이매12'의 가운데 칸. 없으면 사랑방 이름 앞부분(이매12 → 이매) ── */
+function areaOf(sb, area) {
+  if (area) return area;
+  const m = String(sb || '').match(/^(.*?[^\d\s])\s*\d+$/);
+  return m ? m[1] : '기타';
+}
+function areasOf(list) { return [...new Set(list.map(x => areaOf(x.sarangbang, x.area)))].sort(koSort); }
+function areaBar(areas, allAreas, badge) {
+  const cnt = a => allAreas.filter(x => !a || x === a).length;
+  return `<div class="sitchips" style="margin-bottom:12px">${[''].concat(areas).map(a => `<button class="${S.area === a ? 'on' : ''}" data-a="${esc(a)}" onclick="setArea(this.dataset.a)">${a ? esc(a) : '전체'} <small style="opacity:.7">${badge ? (a ? badge(a) + '/' : '') : ''}${cnt(a)}</small></button>`).join('')}</div>`;
+}
+function setArea(a) { S.area = a; S.sbOpen = ''; render(); }
+function sbOptions(sel) {
+  const list = S.dash ? S.dash.list.map(x => ({ sarangbang: x.sarangbang, area: x.area })) : S.roster ? [...new Map(S.roster.members.map(m => [m.sarangbang, { sarangbang: m.sarangbang, area: m.area }])).values()] : (S.me.sarangbangs || []).map(sb => ({ sarangbang: sb }));
+  const groups = {};
+  list.forEach(x => { const a = areaOf(x.sarangbang, x.area); (groups[a] = groups[a] || []).push(x.sarangbang); });
+  const keys = Object.keys(groups).sort(koSort);
+  const opt = sb => `<option ${sb === sel ? 'selected' : ''}>${esc(sb)}</option>`;
+  return keys.length > 1 ? keys.map(k => `<optgroup label="${esc(k)}">${groups[k].sort(koSort).map(opt).join('')}</optgroup>`).join('') : list.map(x => x.sarangbang).sort(koSort).map(opt).join('');
+}
+
 function renderRoster() {
   const R = S.roster;
   let inner = tabs();
   if (!R) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
   const groups = {};
   R.members.forEach(m => (groups[m.sarangbang] = groups[m.sarangbang] || []).push(m));
-  const sbs = Object.keys(groups).sort(koSort);
-  inner += `<div class="stats"><div class="stat"><b>${sbs.length}</b><small>사랑방</small></div><div class="stat"><b>${R.members.length}</b><small>성도</small></div><div class="stat"><b style="color:#d97706">${R.leaders.length}</b><small>사랑방장</small></div></div>`;
+  const sbInfo = Object.keys(groups).map(sb => ({ sarangbang: sb, area: (groups[sb].find(m => m.area) || {}).area || '' }));
+  const areas = areasOf(sbInfo);
+  if (S.area && !areas.includes(S.area)) S.area = '';
+  const inA = x => !S.area || areaOf(x.sarangbang, x.area) === S.area;
+  const sbs = sbInfo.filter(inA).map(x => x.sarangbang).sort(koSort);
+  const leadersA = R.leaders.filter(l => !S.area || areaOf(l.sarangbang, (sbInfo.find(x => x.sarangbang === l.sarangbang) || {}).area) === S.area);
 
-  inner += `<div class="card"><h3>📤 명단 파일 올리기</h3>
-    <p class="muted" style="margin:0 0 12px">교회 시스템에서 내려받은 <b>엑셀(xlsx)·CSV</b>를 그대로 올리세요. 이름·사랑방·직분·연락처 칸을 자동으로 찾아 주고, 반영 전에 미리 보여 드려요.</p>
-    <div class="row"><label class="btn pri grow filebtn">파일 선택<input type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="pickFile(this)"></label><button class="btn ghost" onclick="downloadTemplate()">빈 양식 받기</button></div></div>`;
+  inner += `<div class="stats"><div class="stat"><b>${Object.keys(groups).length}</b><small>사랑방</small></div><div class="stat"><b>${R.members.length}</b><small>성도</small></div><div class="stat"><b style="color:#d97706">${R.leaders.length}</b><small>사랑방장</small></div></div>`;
 
-  inner += `<div class="card"><h3>🔗 사랑방장 링크 보내기 ${R.leaders.length ? '<button class="btn soft sm" onclick="copyAllLinks()">전체 복사</button>' : ''}</h3>
-    ${R.leaders.length ? `<p class="muted" style="margin:0 0 6px">링크를 받은 사랑방장은 <b>로그인 없이</b> 자기 사랑방 보고 화면으로 바로 들어옵니다.</p>` + R.leaders.slice().sort((a, b) => koSort(a.sarangbang, b.sarangbang)).map(l => {
+  // 이름 찾기
+  inner += `<div class="card" style="padding:12px 14px"><input class="input" id="rq" placeholder="🔍 성도 이름으로 찾기" oninput="rosterSearch(this.value)" autocomplete="off"><div id="rqOut"></div></div>`;
+
+  // 마을 선택
+  if (areas.length > 1) inner += areaBar(areas, sbInfo.map(x => areaOf(x.sarangbang, x.area)));
+
+  // 사랑방 목록 (누르면 펼침)
+  inner += `<div class="card"><h3>${S.area ? esc(S.area) + ' ' : ''}사랑방 <span class="hint">${sbs.length}곳 · 눌러서 성도 보기</span></h3>
+    ${sbs.map(sb => {
+      const ms = groups[sb], lds = ms.filter(isLeader).map(m => m.name), open = S.sbOpen === sb;
+      const head = `<div class="sb" data-sb="${esc(sb)}" onclick="toggleSb(this.dataset.sb)"><div class="nm"><b>${esc(sb)}</b><small>${lds.length ? '★ ' + esc(lds.join(', ')) : '<span style="color:var(--red)">사랑방장 없음</span>'}</small></div><div class="num"><b>${ms.length}</b>명 ${open ? '▴' : '▾'}</div></div>`;
+      if (!open) return head;
+      const sorted = ms.slice().sort((a, b) => (isLeader(b) - isLeader(a)) || koSort(a.name, b.name));
+      return head + `<div style="background:#fafbff;border-radius:12px;padding:2px 12px;margin:0 -4px 8px">
+        ${sorted.map(m => `<div class="mrow" onclick="editMember('${m.id}')"><div class="nm">${isLeader(m) ? '<span class="star">★</span> ' : ''}<b>${esc(m.name)}</b><small>${esc(m.title)}</small></div><div class="ph">${esc(m.phone || '연락처 없음')}</div></div>`).join('')}
+        <div class="row" style="padding:8px 0"><button class="btn soft sm grow" data-sb="${esc(sb)}" onclick="editMember('', this.dataset.sb)">＋ 이 사랑방에 성도 추가</button></div></div>`;
+    }).join('') || '<div class="empty">아직 명단이 없어요. 아래에서 엑셀 파일을 올려 주세요.</div>'}</div>`;
+
+  // 사랑방장 링크 (접어 둠)
+  const seen = leadersA.filter(l => l.lastSeen).length;
+  inner += `<div class="card"><h3>🔗 ${S.area ? esc(S.area) + ' ' : ''}사랑방장 링크 <span class="row">${leadersA.length ? `<button class="btn soft sm" onclick="copyAllLinks()">전체 복사</button>` : ''}</span></h3>
+    <p class="muted" style="margin:0 0 8px">사랑방장 ${leadersA.length}명 · <span style="color:var(--ok)">접속 ${seen}</span> · 미접속 ${leadersA.length - seen} — 링크를 받은 사랑방장은 로그인 없이 바로 들어옵니다.</p>
+    ${S.linkOpen ? leadersA.slice().sort((a, b) => (!!a.lastSeen - !!b.lastSeen) || koSort(a.sarangbang, b.sarangbang)).map(l => {
       const i = R.leaders.indexOf(l);
       return `<div class="mrow" style="cursor:default"><div class="nm"><b>${esc(l.name)}</b><small>${esc(l.sarangbang)}</small><br>${l.lastSeen ? `<span class="tag ok">접속함 · ${esc(String(l.lastSeen).slice(5, 10))}</span>` : '<span class="tag wait">아직 안 들어옴</span>'}</div>
         <button class="btn soft sm" onclick="shareInvite(${i})">카톡 공유</button>${l.phone ? `<a class="btn ghost sm" href="${smsHref(l.phone, inviteText(l))}">문자</a>` : ''}</div>`;
-    }).join('') : '<div class="empty">아래 명단에서 성도를 눌러 <b>★ 사랑방장</b>으로 지정하면 링크가 만들어져요.</div>'}</div>`;
+    }).join('') : ''}
+    ${leadersA.length ? `<button class="btn ghost block sm" onclick="S.linkOpen=!S.linkOpen;renderRoster()">${S.linkOpen ? '접기 ▴' : '사랑방장별로 보내기 ▾'}</button>` : '<div class="empty">사랑방을 펼쳐 성도를 누르고 ★ 사랑방장으로 지정하면 링크가 만들어져요.</div>'}</div>`;
 
-  inner += sbs.map(sb => {
-    const ms = groups[sb].slice().sort((a, b) => (isLeader(b) - isLeader(a)) || koSort(a.name, b.name));
-    const lds = ms.filter(isLeader).map(m => m.name);
-    return `<div class="card"><h3><span>${esc(sb)} <span class="hint">${ms.length}명${lds.length ? ' · 사랑방장 ' + esc(lds.join(', ')) : ' · <span style="color:var(--red)">사랑방장 없음</span>'}</span></span><button class="btn soft sm" onclick="editMember('', ${JSON.stringify(sb).replace(/"/g, '&quot;')})">＋ 추가</button></h3>
-      ${ms.map(m => `<div class="mrow" onclick="editMember('${m.id}')"><div class="nm">${isLeader(m) ? '<span class="star">★</span> ' : ''}<b>${esc(m.name)}</b><small>${esc(m.title)}</small></div><div class="ph">${esc(m.phone || '연락처 없음')}</div></div>`).join('')}</div>`;
-  }).join('') || '<div class="card"><div class="empty">아직 명단이 없어요. 위에서 엑셀 파일을 올리거나 아래 버튼으로 한 명씩 추가하세요.</div></div>';
-
-  inner += `<button class="btn ghost block" onclick="editMember('', '')">＋ 새 사랑방 만들기 / 성도 추가</button>`;
+  // 명단 올리기
+  inner += `<div class="card"><h3>📤 명단 파일 올리기</h3>
+    <p class="muted" style="margin:0 0 12px">교회 시스템에서 내려받은 <b>엑셀(xls·xlsx)·CSV</b>를 그대로 올리세요. 반영 전에 미리 보여 드려요.</p>
+    <div class="row"><label class="btn pri grow filebtn">파일 선택<input type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="pickFile(this)"></label><button class="btn ghost" onclick="downloadTemplate()">빈 양식</button></div>
+    <button class="btn ghost block sm" style="margin-top:8px" onclick="editMember('', '')">＋ 새 사랑방 만들기 / 성도 한 명 추가</button></div>`;
   $app.innerHTML = shell(inner);
+}
+function toggleSb(sb) { S.sbOpen = S.sbOpen === sb ? '' : sb; renderRoster(); }
+function rosterSearch(q) {
+  const out = document.getElementById('rqOut'); q = q.trim();
+  if (!q) { out.innerHTML = ''; return; }
+  const hits = S.roster.members.filter(m => m.name.includes(q) || digits(m.phone).endsWith(digits(q)) && digits(q).length >= 4).slice(0, 20);
+  out.innerHTML = hits.length ? hits.map(m => `<div class="mrow" onclick="editMember('${m.id}')"><div class="nm">${isLeader(m) ? '<span class="star">★</span> ' : ''}<b>${esc(m.name)}</b><small>${esc(m.title)}</small></div><div class="ph">${esc(m.sarangbang)}</div></div>`).join('') : '<div class="empty" style="padding:10px 0">찾는 성도가 없어요.</div>';
 }
 
 function editMember(id, sb) {
@@ -782,7 +843,8 @@ function editMember(id, sb) {
     <label class="field"><span>연락처</span><input class="input" id="mPhone" inputmode="tel" value="${esc(m.phone)}" placeholder="010-0000-0000"></label>
     <label class="field"><span>사랑방</span><select id="mSb" onchange="document.getElementById('mSbNewWrap').style.display=this.value==='__new'?'block':'none'">
       ${sbs.map(x => `<option ${x === m.sarangbang ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new" ${isNew ? 'selected' : ''}>＋ 새 사랑방 만들기</option></select></label>
-    <label class="field" id="mSbNewWrap" style="display:${isNew ? 'block' : 'none'}"><span>새 사랑방 이름</span><input class="input" id="mSbNew" placeholder="예) 7사랑방"></label>
+    <div id="mSbNewWrap" style="display:${isNew ? 'block' : 'none'}"><div class="row"><label class="field grow"><span>새 사랑방 이름</span><input class="input" id="mSbNew" placeholder="예) 이매15"></label>
+      <label class="field" style="width:40%"><span>마을</span><input class="input" id="mArea" list="alist" value="${esc(S.area || '')}" placeholder="예) 이매"><datalist id="alist">${areasOf(R.members).map(a => `<option value="${esc(a)}">`).join('')}</datalist></label></div></div>
     <label class="radio" style="background:${lead ? 'var(--warn-soft)' : '#fff'}"><input type="checkbox" id="mLeader" ${lead ? 'checked' : ''}><div><b>★ 사랑방장으로 지정</b><small>지정하면 이 분 전용 보고 링크가 만들어집니다. 해제하면 링크가 막혀요.</small></div></label>
     ${lead ? `<button class="btn ghost block" style="margin-bottom:8px" onclick="resetLink('${esc(m.name)}')">🔄 링크 새로 만들기 (휴대폰 교체·링크 유출 시)</button>` : ''}
     <div class="row">${id ? `<button class="btn ghost" style="color:var(--red)" onclick="removeMember('${id}')">삭제</button>` : ''}<button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" id="mSave" onclick="saveMember('${id}')">저장</button></div>`);
@@ -790,7 +852,8 @@ function editMember(id, sb) {
 
 async function saveMember(id) {
   const sel = val('mSb'), sb = sel === '__new' ? val('mSbNew') : sel;
-  const member = { id, name: val('mName'), title: val('mTitle'), phone: val('mPhone'), sarangbang: sb, leader: document.getElementById('mLeader').checked };
+  const same = S.roster.members.find(x => x.sarangbang === sb && x.area);
+  const member = { id, name: val('mName'), title: val('mTitle'), phone: val('mPhone'), sarangbang: sb, area: sel === '__new' ? val('mArea') : (same ? same.area : ''), leader: document.getElementById('mLeader').checked };
   if (!member.name || !member.sarangbang) return toast('이름과 사랑방을 적어 주세요.');
   const wasLeader = id ? isLeader(S.roster.members.find(x => x.id === id)) : false;
   const b = document.getElementById('mSave'); b.disabled = true;
@@ -825,8 +888,9 @@ async function shareText(t) {
 }
 function shareInvite(i) { closeLayer(); shareText(inviteText(S.roster.leaders[i])); }
 function copyAllLinks() {
-  const L = S.roster.leaders.slice().sort((a, b) => koSort(a.sarangbang, b.sarangbang));
-  copy(`[${S.roster.parish} 사랑방장 ‘잇다’ 링크]\n각자 자기 이름 링크를 눌러 주세요. 처음 한 번만 ‘홈 화면에 추가’ 해 주시면 됩니다 🙏\n\n` + L.map(l => `· ${l.sarangbang} ${l.name}\n${linkOf(l.token)}`).join('\n\n'), '전체 링크를 복사했어요. 사랑방장 단톡방에 붙여 넣으세요.');
+  const R = S.roster, area = sb => areaOf(sb, (R.members.find(m => m.sarangbang === sb && m.area) || {}).area);
+  const L = R.leaders.filter(l => !S.area || area(l.sarangbang) === S.area).sort((a, b) => koSort(a.sarangbang, b.sarangbang));
+  copy(`[${S.roster.parish}${S.area ? ' ' + S.area : ''} 사랑방장 ‘잇다’ 링크]\n각자 자기 이름 링크를 눌러 주세요. 처음 한 번만 ‘홈 화면에 추가’ 해 주시면 됩니다 🙏\n\n` + L.map(l => `· ${l.sarangbang} ${l.name}\n${linkOf(l.token)}`).join('\n\n'), '전체 링크를 복사했어요. 사랑방장 단톡방에 붙여 넣으세요.');
 }
 
 /* ── 엑셀·CSV 읽기 ── */
@@ -887,7 +951,7 @@ function openImport(table, fname) {
   // 제목 줄(예: '5교구')에서 교구 이름 찾기 — 소속 칸에 교구가 없을 때 사용
   let fileParish = '';
   table.slice(0, Math.max(hi, 0)).forEach(r => r.forEach(c => { const pp = parseOrg(c).parish; if (pp && !fileParish) fileParish = pp; }));
-  S.imp = { table, fname, hi, fileParish, map: hi >= 0 ? detectMap(table[hi]) : {}, mode: 'merge', all: S.me.user.role === '관리자' };
+  S.imp = { table, fname, hi, fileParish, map: hi >= 0 ? detectMap(table[hi]) : {}, mode: 'merge', all: isChurchAdmin() };
   drawImport();
 }
 /** 소속 칸 해석: "5교구 3사랑방", "5교구>3사랑방", "할렐루야교회/5교구/3사랑방", "5-3" 등 */
@@ -932,7 +996,7 @@ function sameParish(a, b) { a = String(a).replace(/\s/g, ''); b = String(b).repl
 function phoneView(v) { const d = digits(v); const x = /^1\d{9}$/.test(d) ? '0' + d : d; return /^01\d{9}$/.test(x) ? x.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : String(v || ''); }
 
 function importRows() {
-  const I = S.imp, m = I.map, my = S.roster.parish, all = I.all && S.me.user.role === '관리자';
+  const I = S.imp, m = I.map, my = S.roster.parish, all = I.all && isChurchAdmin();
   const rows = [], pastors = [];
   let skipped = 0, otherParish = 0, noParish = 0;
   I.table.slice(I.hi + 1).forEach(r => {
@@ -948,14 +1012,14 @@ function importRows() {
     const pa = all ? parish : my;
     if (role === 'pastor') { pastors.push({ name, parish: pa, phone }); return; }
     if (!sb) { skipped++; return; }
-    rows.push({ name, parish: pa, sarangbang: sb, title, phone, leader: role === 'leader' });
+    rows.push({ name, parish: pa, area: org.area || '', sarangbang: sb, title, phone, leader: role === 'leader' });
   });
   return { rows, pastors, skipped, otherParish, noParish };
 }
 
 function drawImport() {
   const I = S.imp, head = I.hi >= 0 ? I.table[I.hi] : I.table[0].map((_, i) => String.fromCharCode(65 + i) + '열');
-  const admin = S.me.user.role === '관리자';
+  const admin = isChurchAdmin();
   const opts = sel => `<option value="">(없음)</option>` + head.map((h, i) => `<option value="${i}" ${String(sel) === String(i) ? 'selected' : ''}>${esc(h || String.fromCharCode(65 + i) + '열')}</option>`).join('');
   const { rows, pastors, skipped, otherParish, noParish } = importRows();
   const parishes = [...new Set(rows.map(r => r.parish).concat(pastors.map(p => p.parish)))].sort(koSort);
@@ -988,7 +1052,7 @@ function drawImport() {
     <div class="row" style="margin-top:6px"><button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" id="impBtn" ${ok ? '' : 'disabled'} onclick="doImport()">${rows.length + pastors.length}명 반영하기</button></div>`);
 }
 async function doImport() {
-  const I = S.imp, { rows, pastors } = importRows(), all = I.all && S.me.user.role === '관리자';
+  const I = S.imp, { rows, pastors } = importRows(), all = I.all && isChurchAdmin();
   if (I.mode === 'replace' && !confirm(`${all ? '파일에 있는 모든 교구' : S.roster.parish} 명단을 이 파일 내용으로 모두 바꿀까요?`)) return;
   const b = document.getElementById('impBtn'); b.disabled = true; b.textContent = '반영 중…';
   try {
@@ -1010,8 +1074,9 @@ function renderStaff() {
   const T = S.staff;
   let inner = tabs();
   if (!T) { $app.innerHTML = shell(inner + '<div class="empty">불러오지 못했어요.</div>'); return; }
-  inner += `<div class="card"><h3>교구 목회자 배정 <button class="btn soft sm" onclick="editStaff(-1)">＋ 추가</button></h3>
-    <p class="muted" style="margin:0 0 6px">목회자를 교구에 배정하면, 그 목회자가 자기 교구 명단을 올리고 사랑방장을 지정합니다.</p>
+  const lock = T.lockedParish;
+  inner += `<div class="card"><h3>${lock ? esc(lock) + ' 교역자' : '교구 목회자 배정'} <button class="btn soft sm" onclick="editStaff(-1)">＋ 추가</button></h3>
+    <p class="muted" style="margin:0 0 6px">${lock ? `함께 섬기는 ${esc(lock)} 목회자·전도사를 추가하면 같은 교구 화면을 볼 수 있습니다.` : '목회자를 교구에 배정하면, 그 목회자가 자기 교구 명단을 올리고 사랑방장을 지정합니다.'}</p>
     ${T.list.slice().sort((a, b) => koSort(a.parish, b.parish)).map(p => { const i = T.list.indexOf(p); return `<div class="mrow" onclick="editStaff(${i})"><div class="nm"><b>${esc(p.name)}</b><small>${esc(p.role)}</small><br><span class="tag p">${esc(p.parish)}</span> ${p.lastSeen ? '<span class="tag ok">접속함</span>' : '<span class="tag wait">아직 안 들어옴</span>'}</div>
       <button class="btn soft sm" onclick="event.stopPropagation();shareText(inviteText(S.staff.list[${i}],true))">링크 공유</button></div>`; }).join('')}</div>`;
   $app.innerHTML = shell(inner);
@@ -1020,7 +1085,7 @@ function editStaff(i) {
   const p = i >= 0 ? S.staff.list[i] : { name: '', parish: '', phone: '', role: '목회자' };
   openLayer(`<div class="grab"></div><h2>${i >= 0 ? '교역자 정보' : '교역자 추가'}</h2>
     <label class="field" style="margin-top:12px"><span>이름</span><input class="input" id="sName" value="${esc(p.name)}"></label>
-    <label class="field"><span>담당 교구</span><input class="input" id="sParish" value="${esc(p.parish)}" placeholder="예) 5교구" list="plist"><datalist id="plist">${(S.staff.parishes || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+    <label class="field"><span>담당 교구</span><input class="input" id="sParish" value="${esc(S.staff.lockedParish || p.parish)}" ${S.staff.lockedParish ? 'readonly' : ''} placeholder="예) 5교구" list="plist"><datalist id="plist">${(S.staff.parishes || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
     <label class="field"><span>연락처</span><input class="input" id="sPhone" inputmode="tel" value="${esc(p.phone)}"></label>
     <label class="field"><span>역할</span><select id="sRole"><option ${p.role === '목회자' ? 'selected' : ''}>목회자</option><option ${p.role === '관리자' ? 'selected' : ''}>관리자</option></select></label>
     <div class="row">${i >= 0 ? `<button class="btn ghost" style="color:var(--red)" onclick="saveStaff(${i},true)">삭제</button>` : ''}<button class="btn ghost grow" onclick="closeLayer()">취소</button><button class="btn pri grow" onclick="saveStaff(${i})">저장</button></div>`);
@@ -1105,20 +1170,20 @@ function logoSvg(n) { return `<svg width="${n}" height="${n}" viewBox="0 0 24 24
 /* ───────── 체험(데모) 모드 — API_URL이 비어 있을 때만 사용 ───────── */
 const Demo = (() => {
   const users = [
-    { name: '홍길동', role: '사랑방장', parish: '5교구', sarangbang: '1사랑방', code: '1111', token: 'demo-leader', phone: '010-1234-5678', lastSeen: '2026-11-08 13:10' },
-    { name: '최믿음', role: '사랑방장', parish: '5교구', sarangbang: '2사랑방', code: '2222', token: 'demo-leader2', phone: '010-2345-6789', lastSeen: '' },
+    { name: '홍길동', role: '사랑방장', parish: '5교구', sarangbang: '이매1', code: '1111', token: 'demo-leader', phone: '010-1234-5678', lastSeen: '2026-11-08 13:10' },
+    { name: '최믿음', role: '사랑방장', parish: '5교구', sarangbang: '이매2', code: '2222', token: 'demo-leader2', phone: '010-2345-6789', lastSeen: '' },
     { name: '이세진', role: '목회자', parish: '5교구', sarangbang: '', code: '0000', token: 'demo-pastor', phone: '' },
     { name: '관리자', role: '관리자', parish: '5교구', sarangbang: '', code: '9999', token: 'demo-admin', phone: '' }
   ];
   let seq = 0; const nid = () => 'dm' + (++seq) + Math.random().toString(36).slice(2, 5);
   let members = [
-    ['1사랑방', '홍길동', '집사', '010-1234-5678'], ['1사랑방', '김은혜', '권사', '010-1111-2222'], ['1사랑방', '박소망', '성도', ''], ['1사랑방', '정사랑', '집사', '010-3333-4444'], ['1사랑방', '윤기쁨', '성도', ''],
-    ['2사랑방', '최믿음', '권사', '010-2345-6789'], ['2사랑방', '한평안', '집사', ''], ['2사랑방', '오온유', '성도', ''], ['2사랑방', '서충성', '집사', ''],
-    ['3사랑방', '강온화', '권사', ''], ['3사랑방', '임절제', '성도', ''], ['3사랑방', '조양선', '집사', '']
+    ['이매1', '홍길동', '집사', '010-1234-5678'], ['이매1', '김은혜', '권사', '010-1111-2222'], ['이매1', '박소망', '성도', ''], ['이매1', '정사랑', '집사', '010-3333-4444'], ['이매1', '윤기쁨', '성도', ''],
+    ['이매2', '최믿음', '권사', '010-2345-6789'], ['이매2', '한평안', '집사', ''], ['이매2', '오온유', '성도', ''], ['이매2', '서충성', '집사', ''],
+    ['아름1', '강온화', '권사', ''], ['아름1', '임절제', '성도', ''], ['아름1', '조양선', '집사', '']
   ].map(m => ({ id: nid(), parish: '5교구', sarangbang: m[0], name: m[1], title: m[2], phone: m[3] }));
   const of = sb => members.filter(m => m.sarangbang === sb);
   const sbsOf = () => [...new Set(members.map(m => m.sarangbang).concat(users.filter(u => u.sarangbang).map(u => u.sarangbang)))].sort(koSort);
-  const KEY = 'demo-reports-v3', RKEY = 'demo-resp-v3';
+  const KEY = 'demo-reports-v4', RKEY = 'demo-resp-v4';
   const store = () => safeJSON(LS.get(KEY)) || {};
   const put = o => LS.set(KEY, JSON.stringify(o));
   const rstore = () => safeJSON(LS.get(RKEY)) || {};
@@ -1127,8 +1192,8 @@ const Demo = (() => {
     const o = {}, base = new Date(lastSunday() + 'T00:00:00');
     for (let w = 0; w <= 7; w++) {
       const d = new Date(base); d.setDate(d.getDate() - 7 * w); const ds = fmt(d);
-      ['1사랑방', '2사랑방', '3사랑방'].forEach(sb => {
-        if (w === 0 && sb !== '2사랑방') return;
+      ['이매1', '이매2', '아름1'].forEach(sb => {
+        if (w === 0 && sb !== '이매2') return;
         const ms = of(sb).map(m => m.name);
         const k = Math.max(1, ms.length - ((w + sb.length) % 3));
         o[ds + '|' + sb] = { date: ds, parish: '5교구', sarangbang: sb, worship: ms.slice(0, k), group: ms.slice(0, Math.max(1, k - 1)), newcomers: [],
