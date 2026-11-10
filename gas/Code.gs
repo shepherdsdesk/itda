@@ -21,7 +21,7 @@ const HEAD = {
   MEMBERS: ['교구', '마을', '사랑방', '이름', '직분', '연락처', '비고', '성도ID'],
   REPORTS: ['주일', '교구', '사랑방', '작성자', '재적', '예배출석', '사랑방출석', '새가족수',
     '예배출석명단', '사랑방출석명단', '결석명단', '새가족', '특이사항', '부탁', '제출시각', '수정시각', '기록ID', '원본JSON'],
-  PRAYERS: ['주일', '교구', '사랑방', '대상', '기도제목', '부탁', '작성자', '기록ID', '기도ID', '목회자확인'],
+  PRAYERS: ['주일', '교구', '사랑방', '대상', '기도제목', '부탁', '작성자', '기록ID', '기도ID', '목회자확인', '처리', '처리시각'],
   RESP: ['기록ID', '주일', '교구', '사랑방', '코멘트', '코멘트작성', '코멘트시각', '확인JSON'],
   SMS: ['상황', '제목', '본문', '말씀', '예화']
 };
@@ -43,6 +43,8 @@ function onOpen() {
     .addItem('③ 사용키 넣기', 'enterKey')
     .addItem('④ 체험 admin 코드 새로 만들기', 'rotateTrialCode')
     .addItem('⑤ 체험 데이터(열두 제자) 지우기', 'clearTrial')
+    .addSeparator()
+    .addItem('⑥ 주일 미제출 알림 메일 켜기·끄기', 'toggleAlert')
     .addToUi();
 }
 
@@ -188,7 +190,11 @@ const API = {
     const members = rows(SH.MEMBERS).filter(m => m['교구'] === t.parish && m['사랑방'] === t.sarangbang)
       .map(m => ({ name: String(m['이름']), title: String(m['직분'] || '') }));
     const r = findReport(date, t.parish, t.sarangbang);
+    const pd = new Date(date + 'T00:00:00'); pd.setDate(pd.getDate() - 7);
+    const pr = findReport(Utilities.formatDate(pd, tz(), 'yyyy-MM-dd'), t.parish, t.sarangbang);
+    const pj = pr ? safeParse(pr['원본JSON']) : null;
     return {
+      prev: pj ? { worship: pj.worship || [], group: pj.group || [] } : null,
       parish: t.parish, sarangbang: t.sarangbang, date, members,
       report: r ? safeParse(r['원본JSON']) : null, updatedAt: r ? r['수정시각'] : '',
       resp: r ? respView(findResp(r['기록ID'])) : null
@@ -230,11 +236,12 @@ const API = {
 
       // 기도제목 시트 다시 쓰기 (확인 기록 유지)
       const acks = (respView(findResp(id)) || {}).acks || {};
+      ensureHead('PRAYERS');
       const ps = sh(SH.PRAYERS);
       findRowNums(SH.PRAYERS, '기록ID', id).sort((a, b) => b - a).forEach(r => ps.deleteRow(r));
       if (prayers.length) {
         const pv = prayers.map(p => [date, t.parish, t.sarangbang, p.who, p.text, p.req, u['이름'], id, p.id,
-          acks[p.id] ? acks[p.id].by + ' ' + acks[p.id].at : '']);
+          acks[p.id] ? acks[p.id].by + ' ' + acks[p.id].at : '', acks[p.id] && acks[p.id].action || '', acks[p.id] && acks[p.id].actionAt || '']);
         ps.getRange(ps.getLastRow() + 1, 1, pv.length, pv[0].length).setValues(pv);
       }
 
@@ -281,7 +288,61 @@ const API = {
       const rs = all.filter(x => x['주일'] === dt);
       return { date: dt, worship: sum(rs, '예배출석'), group: sum(rs, '사랑방출석'), count: rs.length };
     });
-    return { parish, date, list, trend, pastor: u['이름'] };
+    // 장기 결석: 최근 제출된 보고에서 3주 이상 연속으로 예배에 빠진 성도
+    const longAbsent = [];
+    list.forEach(x => {
+      const rs = all.filter(r => r['사랑방'] === x.sarangbang && r['주일'] <= date).sort((a, b) => a['주일'] < b['주일'] ? 1 : -1);
+      if (rs.length < 3) return;
+      const sets = rs.map(r => String(r['예배출석명단'] || '').split(', '));
+      x.people.forEach(m => {
+        let k = 0;
+        for (let i = 0; i < sets.length; i++) { if (sets[i].indexOf(m.name) >= 0) break; k++; }
+        if (k >= 3) longAbsent.push({ name: m.name, title: m.title, phone: m.phone, sarangbang: x.sarangbang, area: x.area, weeks: k, more: k === sets.length });
+      });
+    });
+    longAbsent.sort((a, b) => b.weeks - a.weeks);
+    return { parish, date, list, trend, longAbsent, pastor: u['이름'] };
+  },
+
+  /** 연간 현황: 최근 52주 출석 추이 · 사랑방별 비교 · 새가족 · 부탁 처리 기록 (10분간 기억) */
+  yearly(req) {
+    const u = auth(req);
+    if (u['역할'] === ROLE.LEADER) throw new Error('목회자만 볼 수 있습니다.');
+    const parish = isChurchAdmin(u) ? String(req.parish || allParishes()[0] || '') : u['교구'];
+    const cache = CacheService.getScriptCache(), ck = 'yr:' + parish;
+    if (!req.fresh) { const hit = cache.get(ck); if (hit) return JSON.parse(hit); }
+    const t0 = new Date(); t0.setDate(t0.getDate() - t0.getDay() - 7 * 51);
+    const from = Utilities.formatDate(t0, tz(), 'yyyy-MM-dd');
+    const s = sh(SH.REPORTS), last = s.getLastRow();
+    const vals = last >= 2 ? s.getRange(2, 1, last - 1, 8).getValues() : []; // 주일·교구·사랑방·작성자·재적·예배·사랑방·새가족 (긴 칸은 읽지 않음)
+    const weeks = {}, bySb = {};
+    vals.forEach(r => {
+      if (String(r[1]).trim() !== parish) return;
+      const d = norm(r[0], '주일'); if (!d || d < from) return;
+      const w = weeks[d] = weeks[d] || { date: d, worship: 0, group: 0, newcomers: 0, count: 0, enrolled: 0 };
+      w.worship += Number(r[5]) || 0; w.group += Number(r[6]) || 0; w.newcomers += Number(r[7]) || 0; w.enrolled += Number(r[4]) || 0; w.count++;
+      const b = bySb[String(r[2])] = bySb[String(r[2])] || { reports: 0, worship: 0, group: 0, newcomers: 0 };
+      b.reports++; b.worship += Number(r[5]) || 0; b.group += Number(r[6]) || 0; b.newcomers += Number(r[7]) || 0;
+    });
+    const members = rows(SH.MEMBERS).filter(m => m['교구'] === parish);
+    const nWeeks = Object.keys(weeks).length;
+    const sbs = sarangbangsOf(parish).map(sb => {
+      const ms = members.filter(m => m['사랑방'] === sb), am = ms.find(m => m['마을']), b = bySb[sb] || { reports: 0, worship: 0, group: 0, newcomers: 0 };
+      return { sarangbang: sb, area: am ? String(am['마을']) : '', enrolled: ms.length, reports: b.reports,
+        avgWorship: b.reports ? Math.round(b.worship / b.reports * 10) / 10 : 0, avgGroup: b.reports ? Math.round(b.group / b.reports * 10) / 10 : 0, newcomers: b.newcomers };
+    });
+    // 부탁 처리 기록
+    let care = [];
+    try {
+      care = rows(SH.PRAYERS).filter(p => p['교구'] === parish && p['부탁'] && p['주일'] >= from)
+        .map(p => ({ date: p['주일'], sarangbang: p['사랑방'], who: p['대상'], req: p['부탁'], text: String(p['기도제목'] || ''), ack: String(p['목회자확인'] || ''), action: String(p['처리'] || ''), actionAt: String(p['처리시각'] || '') }))
+        .sort((a, b) => a.date < b.date ? 1 : -1);
+    } catch (e) { }
+    const out = { parish, from, nWeeks, weeks: Object.keys(weeks).sort().map(k => weeks[k]), sbs, enrolledTotal: members.length,
+      careCount: { total: care.length, ack: care.filter(c => c.ack).length, call: care.filter(c => c.action === '전화함').length, visit: care.filter(c => c.action === '심방함').length, pray: care.filter(c => c.action === '기도함').length },
+      care: care.slice(0, 150), at: stamp() };
+    try { cache.put(ck, JSON.stringify(out), 600); } catch (e) { }
+    return out;
   },
 
   /** 목회자 코멘트 (사랑방장 화면에 표시) */
@@ -299,12 +360,17 @@ const API = {
     if (!pid) throw new Error('기도제목을 찾을 수 없습니다.');
     const res = withResp(r, o => {
       const acks = safeParse(o['확인JSON']) || {};
-      if (req.done === false) delete acks[pid]; else acks[pid] = { by: u['이름'], at: stamp() };
+      const STEPS = ['전화함', '심방함', '기도함'];
+      if (req.done === false) delete acks[pid];
+      else if (req.step === 'undo') { if (acks[pid]) { delete acks[pid].action; delete acks[pid].actionAt; } }
+      else if (STEPS.indexOf(req.step) >= 0) acks[pid] = Object.assign(acks[pid] || { by: u['이름'], at: stamp() }, { action: req.step, actionAt: stamp() });
+      else acks[pid] = Object.assign({ by: u['이름'], at: stamp() }, acks[pid] && acks[pid].action ? { action: acks[pid].action, actionAt: acks[pid].actionAt } : {});
       o['확인JSON'] = JSON.stringify(acks);
     });
+    ensureHead('PRAYERS');
     // 기도제목 시트에도 표시
     const pr = findRowNums(SH.PRAYERS, '기도ID', pid).map(n => rowObj(SH.PRAYERS, n)).find(x => x['기록ID'] === r['기록ID']);
-    if (pr) { const a = res.acks[pid]; sh(SH.PRAYERS).getRange(pr._row, 10).setValue(a ? a.by + ' ' + a.at : ''); }
+    if (pr) { const a = res.acks[pid]; sh(SH.PRAYERS).getRange(pr._row, 10, 1, 3).setValues([[a ? a.by + ' ' + a.at : '', a && a.action || '', a && a.actionAt || '']]); flush(); }
     return res;
   },
 
@@ -555,6 +621,58 @@ function clearTrial() {
   ui.alert('체험 데이터를 지웠습니다. [사용자] 시트에 본인을 관리자로 넣고 메뉴 ② 를 눌러 주세요.');
 }
 function code6() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
+/** 예전에 만든 시트에 새로 생긴 칸 제목을 끝에 붙임 */
+function ensureHead(key) {
+  const k = 'head#' + key; if (MEMO[k]) return; MEMO[k] = 1;
+  const s = sh(SH[key]);
+  const head = s.getRange(1, 1, 1, Math.max(1, s.getLastColumn())).getValues()[0];
+  HEAD[key].forEach((h, i) => { if (head[i] !== h && head.indexOf(h) < 0 && !head[i]) s.getRange(1, i + 1).setValue(h).setFontWeight('bold').setBackground('#eef2ff'); });
+}
+
+/* ════════════ 주일 미제출 알림 메일 ════════════ */
+function toggleAlert() {
+  const ui = SpreadsheetApp.getUi();
+  const old = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'sendMissingMail');
+  if (old.length) {
+    if (ui.alert('미제출 알림', '지금 알림이 켜져 있습니다. 끌까요?\n(아니요 = 시각·메일 주소 다시 정하기)', ui.ButtonSet.YES_NO) === ui.Button.YES) { old.forEach(t => ScriptApp.deleteTrigger(t)); ui.alert('알림을 껐습니다.'); return; }
+    old.forEach(t => ScriptApp.deleteTrigger(t));
+  }
+  const c = getConfig();
+  const h = ui.prompt('미제출 알림 — 시각', '주일 몇 시에 보낼까요? (0~23, 예: 18 = 저녁 6시)', ui.ButtonSet.OK_CANCEL);
+  if (h.getSelectedButton() !== ui.Button.OK) return;
+  const hour = Math.min(23, Math.max(0, parseInt(h.getResponseText() || c['알림시각'] || '18', 10) || 18));
+  const m = ui.prompt('미제출 알림 — 받는 메일', '받는 메일 주소 (여러 명은 쉼표로)\n비워 두면: ' + (c['알림메일'] || Session.getEffectiveUser().getEmail()), ui.ButtonSet.OK_CANCEL);
+  if (m.getSelectedButton() !== ui.Button.OK) return;
+  const mail = String(m.getResponseText() || c['알림메일'] || Session.getEffectiveUser().getEmail()).trim();
+  setConfig('알림시각', hour); setConfig('알림메일', mail);
+  ScriptApp.newTrigger('sendMissingMail').timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(hour).create();
+  ui.alert('알림을 켰습니다.\n매주 주일 ' + hour + '시쯤, 보고를 내지 않은 사랑방 목록을 ' + mail + ' 로 보냅니다.');
+}
+
+function sendMissingMail() {
+  flush();
+  const L = license();
+  if (L.state !== 'full' && L.state !== 'trial') return;
+  const c = getConfig(), to = String(c['알림메일'] || '').trim();
+  if (!to) return;
+  const d = new Date(); d.setDate(d.getDate() - d.getDay());
+  const date = Utilities.formatDate(d, tz(), 'yyyy-MM-dd');
+  const reps = rowsOnDates(SH.REPORTS, [date]);
+  const leaders = rows(SH.USERS).filter(x => x['역할'] === ROLE.LEADER);
+  const lines = []; let miss = 0, total = 0;
+  allParishes().filter(p => p !== TRIAL_PARISH).forEach(p => {
+    const sbs = sarangbangsOf(p); total += sbs.length;
+    const no = sbs.filter(sb => !reps.some(r => r['교구'] === p && r['사랑방'] === sb));
+    miss += no.length;
+    lines.push('■ ' + p + ' — 제출 ' + (sbs.length - no.length) + '/' + sbs.length);
+    no.forEach(sb => { const l = leaders.filter(x => x['교구'] === p && x['사랑방'] === sb).map(x => x['이름'] + (x['연락처'] ? ' ' + x['연락처'] : '')).join(', '); lines.push('  · ' + sb + (l ? ' (' + l + ')' : '')); });
+  });
+  if (!total) return;
+  const app = String(c['앱주소'] || APP_URL), sid = serverIdOf(c['서버주소']);
+  MailApp.sendEmail(to, '[잇다] ' + date + ' 주일보고 — ' + (miss ? '미제출 ' + miss + '곳' : '모두 제출 🙏'),
+    (c['교회이름'] || '') + ' ' + date + ' 주일보고 현황입니다.\n\n' + lines.join('\n') + '\n\n앱에서 보기: ' + app + (sid ? '?s=' + sid : '') + '\n\n— 잇다 (AI목양지원센터)');
+}
 
 /* ───── 명단 도우미 ───── */
 /** 교회 전체 관리자 = 역할 '관리자' + 교구 칸이 비어 있음. 교구가 적힌 관리자는 그 교구만 봄 */
